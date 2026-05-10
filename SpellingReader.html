@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Reader</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#100e0a;--s1:#1c1914;--s2:#252118;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.14);
+  --text:#f0ebe2;--muted:#7a7368;--dim:#4a463e;
+  --gold:#d4a843;--gold-bg:rgba(212,168,67,0.09);--gold-bg2:rgba(212,168,67,0.18);
+  --green:#5a9e6a;--green-bg:rgba(90,158,106,0.08);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem 1rem;}
+.app{width:100%;max-width:580px;}
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* HOME */
+.brand{text-align:center;margin-bottom:2.5rem;}
+.brand-icon{font-size:44px;display:block;margin-bottom:10px;animation:iconpulse 3s ease-in-out infinite;}
+@keyframes iconpulse{0%,100%{opacity:1}50%{opacity:.65}}
+.brand h1{font-family:'Playfair Display',serif;font-size:40px;font-weight:600;letter-spacing:-1.5px;}
+.brand .sub{font-size:11px;color:var(--muted);letter-spacing:.22em;text-transform:uppercase;margin-top:7px;}
+.section-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-bottom:.9rem;}
+.level-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2rem;}
+.level-card{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:1.1rem .75rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s,transform .12s;user-select:none;position:relative;}
+.level-card:hover{border-color:var(--gold);background:var(--s2);transform:translateY(-2px);}
+.level-card:active{transform:scale(.97);}
+.level-card.selected{border-color:var(--gold);background:var(--gold-bg);}
+.level-card .ln{font-family:'Playfair Display',serif;font-size:30px;font-weight:600;color:var(--gold);line-height:1;}
+.level-card .lt{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:4px;}
+.level-card .lc{font-size:10px;color:var(--dim);margin-top:3px;}
+.level-card .chk{position:absolute;top:7px;right:9px;color:var(--gold);font-size:13px;display:none;}
+.level-card.selected .chk{display:block;}
+.count-section{display:none;}
+.count-section.visible{display:block;animation:slideUp .3s ease;}
+@keyframes slideUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.count-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:.75rem;}
+.count-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:.85rem .5rem;text-align:center;cursor:pointer;transition:border-color .2s,background .2s,transform .12s;user-select:none;}
+.count-card:hover{border-color:var(--gold);background:var(--s2);transform:translateY(-2px);}
+.count-card:active{transform:scale(.97);}
+.count-card.selected{border-color:var(--gold);background:var(--gold-bg);}
+.count-card.disabled{opacity:.3;pointer-events:none;}
+.count-card .cn{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--gold);}
+.count-card .cl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
+.max-note{font-size:11px;color:var(--dim);text-align:center;margin-bottom:.4rem;}
+.back-link{display:block;text-align:center;font-size:12px;color:var(--dim);cursor:pointer;margin-top:.6rem;}
+.back-link:hover{color:var(--muted);}
+.start-btn{width:100%;background:var(--gold);color:#111;border:none;border-radius:14px;padding:15px;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:.75rem;display:none;}
+.start-btn.visible{display:block;}
+.start-btn:hover{opacity:.9;}
+.start-btn:active{transform:scale(.98);}
+
+/* READER */
+.reader-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
+.hdr-btn{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:7px 13px;font-size:13px;color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s;font-family:'DM Sans',sans-serif;}
+.hdr-btn:hover{color:var(--text);border-color:var(--border2);}
+.reader-info{font-size:13px;color:var(--muted);}
+.pause-btn{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:7px 14px;font-size:13px;color:var(--muted);cursor:pointer;transition:color .15s,border-color .15s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px;}
+.pause-btn:hover{color:var(--text);border-color:var(--border2);}
+.pause-btn.paused{color:var(--gold);border-color:rgba(212,168,67,.4);}
+.progress-wrap{background:var(--s2);border-radius:99px;height:2px;margin-bottom:1.5rem;overflow:hidden;}
+.progress-fill{height:100%;background:var(--gold);border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.word-stage{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:2rem 1.5rem 1.75rem;margin-bottom:1.25rem;min-height:330px;}
+
+/* Phase indicator */
+.phase-row{display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:1.5rem;}
+.ph-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);transition:background .3s,transform .3s;}
+.ph-dot.active{background:var(--gold);transform:scale(1.5);}
+.ph-dot.done{background:var(--green);}
+.ph-label{font-size:12px;color:var(--muted);margin-left:8px;display:flex;align-items:center;gap:5px;min-width:110px;}
+.wave{display:inline-flex;align-items:center;gap:2px;height:14px;opacity:0;transition:opacity .3s;}
+.wave.on{opacity:1;}
+.wave-bar{width:3px;background:var(--gold);border-radius:2px;animation:wv .75s ease-in-out infinite;}
+.wave-bar:nth-child(1){animation-delay:0s;height:5px;}
+.wave-bar:nth-child(2){animation-delay:.15s;height:11px;}
+.wave-bar:nth-child(3){animation-delay:.3s;height:7px;}
+@keyframes wv{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.9)}}
+
+/* Letter boxes */
+.letter-row{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px;margin-bottom:1.5rem;min-height:58px;}
+.lb{border:1px solid var(--border2);border-radius:8px;width:44px;height:52px;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:18px;font-weight:500;color:var(--dim);transition:border-color .2s,color .2s,background .2s,transform .2s;text-transform:uppercase;}
+.lb.active{border-color:var(--gold);color:var(--gold);background:var(--gold-bg2);transform:translateY(-4px) scale(1.1);}
+.lb.done{border-color:rgba(90,158,106,.35);color:var(--green);background:var(--green-bg);}
+.letter-row.lg .lb{width:35px;height:44px;font-size:14px;gap:0;}
+.letter-row.xl .lb{width:28px;height:38px;font-size:12px;border-radius:5px;}
+.letter-row.xl{gap:4px;}
+
+/* Word + definition */
+.full-word{font-family:'Playfair Display',serif;font-size:46px;font-weight:600;color:var(--text);text-align:center;margin-bottom:.6rem;opacity:0;transition:opacity .5s;min-height:62px;letter-spacing:-1px;word-break:break-word;}
+.full-word.show{opacity:1;}
+.pos-row{text-align:center;margin-bottom:.7rem;min-height:22px;}
+.pos-badge{display:inline-block;background:var(--gold-bg);border:1px solid rgba(212,168,67,.25);color:var(--gold);border-radius:6px;font-size:11px;font-weight:500;padding:2px 10px;letter-spacing:.05em;opacity:0;transition:opacity .4s;}
+.pos-badge.show{opacity:1;}
+.def-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;font-size:14px;color:var(--muted);line-height:1.75;opacity:0;transition:opacity .5s;min-height:50px;}
+.def-box.show{opacity:1;}
+
+/* Controls */
+.controls{display:flex;align-items:center;justify-content:center;gap:10px;}
+.ctrl{background:var(--s1);border:1px solid var(--border2);border-radius:12px;padding:11px 18px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;transition:background .15s,color .15s,border-color .15s;display:flex;align-items:center;gap:7px;}
+.ctrl:hover{background:var(--s2);color:var(--text);}
+.ctrl:active{transform:scale(.97);}
+.ctrl svg{width:16px;height:16px;fill:currentColor;flex-shrink:0;}
+.ctrl.accent{background:var(--gold-bg);color:var(--gold);border-color:rgba(212,168,67,.3);padding:13px 28px;font-size:15px;}
+.ctrl.accent:hover{background:var(--gold-bg2);}
+
+/* DONE */
+.done-card{background:var(--s1);border:1px solid var(--border);border-radius:20px;padding:3rem 2rem;text-align:center;margin-bottom:1.5rem;}
+.done-icon{font-size:58px;display:block;margin-bottom:1rem;}
+.done-card h2{font-family:'Playfair Display',serif;font-size:32px;font-weight:600;margin-bottom:.5rem;}
+.done-card p{font-size:15px;color:var(--muted);}
+.done-num{font-family:'Playfair Display',serif;font-size:68px;font-weight:600;color:var(--gold);display:block;line-height:1.1;margin:.8rem 0;}
+.done-actions{display:flex;gap:10px;}
+.done-btn{flex:1;padding:14px;border-radius:12px;border:1px solid var(--border2);background:var(--s1);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;color:var(--text);cursor:pointer;transition:background .15s;}
+.done-btn:hover{background:var(--s2);}
+.done-btn.primary{background:var(--gold);color:#111;border-color:transparent;}
+.done-btn.primary:hover{opacity:.88;}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen active">
+  <div class="brand">
+    <span class="brand-icon">📖</span>
+    <h1>Word Reader</h1>
+    <p class="sub">Listen · Spell · Define</p>
+  </div>
+
+  <p class="section-label">Choose a level</p>
+  <div class="level-grid">
+    <div class="level-card" onclick="selectLevel(2)">
+      <span class="chk">✓</span>
+      <div class="ln">2</div><div class="lt">Foundation</div><div class="lc" id="lcount-2"></div>
+    </div>
+    <div class="level-card" onclick="selectLevel(3)">
+      <span class="chk">✓</span>
+      <div class="ln">3</div><div class="lt">Developing</div><div class="lc" id="lcount-3"></div>
+    </div>
+    <div class="level-card" onclick="selectLevel(4)">
+      <span class="chk">✓</span>
+      <div class="ln">4</div><div class="lt">Intermediate</div><div class="lc" id="lcount-4"></div>
+    </div>
+    <div class="level-card" onclick="selectLevel(5)">
+      <span class="chk">✓</span>
+      <div class="ln">5</div><div class="lt">Advanced</div><div class="lc" id="lcount-5"></div>
+    </div>
+    <div class="level-card" onclick="selectLevel(6)">
+      <span class="chk">✓</span>
+      <div class="ln">6</div><div class="lt">Expert</div><div class="lc" id="lcount-6"></div>
+    </div>
+    <div class="level-card" onclick="selectLevel('all')">
+      <span class="chk">✓</span>
+      <div class="ln" style="font-size:18px;padding-top:7px">All</div><div class="lt">Mixed</div><div class="lc" id="lcount-all"></div>
+    </div>
+  </div>
+
+  <div class="count-section" id="count-section">
+    <p class="section-label" id="count-label">How many words?</p>
+    <div class="count-grid">
+      <div class="count-card" id="cnt-10" onclick="selectCount(10)"><div class="cn">10</div><div class="cl">Quick</div></div>
+      <div class="count-card" id="cnt-25" onclick="selectCount(25)"><div class="cn">25</div><div class="cl">Standard</div></div>
+      <div class="count-card" id="cnt-40" onclick="selectCount(40)"><div class="cn">40</div><div class="cl">Challenge</div></div>
+      <div class="count-card" id="cnt-all" onclick="selectCount('all')"><div class="cn" id="cnt-all-n">All</div><div class="cl">Full List</div></div>
+    </div>
+    <p class="max-note" id="max-note"></p>
+    <span class="back-link" onclick="clearLevel()">← Back to level selection</span>
+  </div>
+
+  <button class="start-btn" id="start-btn" onclick="startSession()">▶ Begin Reading Session</button>
+</div>
+
+<!-- ═══ READER ═══ -->
+<div id="screen-reader" class="screen">
+  <div class="reader-header">
+    <button class="hdr-btn" onclick="confirmBack()">← Menu</button>
+    <span class="reader-info" id="reader-info">Word 1 of 10</span>
+    <button class="pause-btn" id="pause-btn" onclick="togglePause()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      Pause
+    </button>
+  </div>
+  <div class="progress-wrap"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+
+  <div class="word-stage">
+    <div class="phase-row">
+      <div class="ph-dot" id="ph0"></div>
+      <div class="ph-dot" id="ph1"></div>
+      <div class="ph-dot" id="ph2"></div>
+      <div class="ph-dot" id="ph3"></div>
+      <div class="ph-label">
+        <span id="phase-txt"></span>
+        <span class="wave" id="wave">
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+          <span class="wave-bar"></span>
+        </span>
+      </div>
+    </div>
+
+    <div class="letter-row" id="letter-row"></div>
+    <div class="full-word" id="full-word"></div>
+    <div class="pos-row"><span class="pos-badge" id="pos-badge"></span></div>
+    <div class="def-box" id="def-box"></div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl" onclick="prevWord()" title="Previous">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg> Prev
+    </button>
+    <button class="ctrl accent" onclick="replayWord()">
+      <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+      Replay
+    </button>
+    <button class="ctrl" onclick="skipWord()" title="Next">
+      Next <svg viewBox="0 0 24 24"><path d="M6 18 14.5 12 6 6v12zm2-8.14L11.03 12 8 14.14V9.86zM16 6h2v12h-2z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══ DONE ═══ -->
+<div id="screen-done" class="screen">
+  <div class="done-card">
+    <span class="done-icon">🎉</span>
+    <h2>Session complete!</h2>
+    <span class="done-num" id="done-num">10</span>
+    <p>words read, spelled &amp; defined</p>
+  </div>
+  <div class="done-actions">
+    <button class="done-btn" onclick="showHome()">← Menu</button>
+    <button class="done-btn primary" onclick="restartSession()">Play again ▶</button>
+  </div>
+</div>
+
+</div>
+<script>
+const DB={
+"abide":{lv:2,pos:"verb",def:"to accept or act according to something",sentence:"If you enter the contest, you have to abide by the rules."},
+"accord":{lv:2,pos:"noun",def:"a formal agreement or contract between two or more groups of people",sentence:"An accord was reached between the workers and management."},
+"acute":{lv:2,pos:"adjective",def:"very sudden and severe",sentence:"The drought has caused acute water shortages."},
+"alcove":{lv:2,pos:"noun",def:"a small space or recess set off from the main part of a room",sentence:"We couldn't fit a bed in the alcove but it was the perfect place to set up a laptop."},
+"alight":{lv:2,pos:"adjective",def:"burning",sentence:"The room looked beautiful with all the candles alight."},
+"ambush":{lv:2,pos:"verb",def:"to hide and wait for someone so as to attack them by surprise",sentence:"The bushrangers were waiting in the hills to ambush the coach."},
+"attack":{lv:2,pos:"verb",def:"to set upon with force or weapons",sentence:"Eagles attack their prey from great heights."},
+"baboon":{lv:2,pos:"noun",def:"a large monkey with a mouth like a dog and a short tail, found in Africa",sentence:"The young baboon was very frightened when humans entered its habitat."},
+"bleach":{lv:2,pos:"verb",def:"to put something in a special liquid to make it white or pale",sentence:"I had to bleach my white sports uniform after I fell in the mud."},
+"breath":{lv:2,pos:"noun",def:"the air taken into your lungs and let out again",sentence:"His warm breath made little clouds in the cold air."},
+"chafe":{lv:2,pos:"verb",def:"to wear down or make sore by rubbing",sentence:"The bandage began to chafe against his wound so he took it off."},
+"convict":{lv:2,pos:"noun",def:"in the past, a person transported to the British colonies to serve out a prison sentence",sentence:"The life of a convict in Port Arthur was very hard."},
+"culture":{lv:2,pos:"noun",def:"the state or stage of civilisation of a particular people at a particular time",sentence:"The ancient Greeks had a rich culture of art, drama and philosophy."},
+"dazzle":{lv:2,pos:"verb",def:"to lessen someone's vision by a sudden intense brightness",sentence:"Bright headlights often dazzle me when I'm driving."},
+"deafen":{lv:2,pos:"verb",def:"to stun with noise",sentence:"I was worried that the music was going to deafen me so I took some earplugs to the concert."},
+"dollop":{lv:2,pos:"noun",def:"a shapeless lump or blob",sentence:"Scones are always better served with a dollop of cream."},
+"earnest":{lv:2,pos:"adjective",def:"serious or sincere",sentence:"Is she earnest about wanting to play the violin?"},
+"engross":{lv:2,pos:"verb",def:"to occupy the mind or attention of completely",sentence:"I recommend that book — it will engross you for days."},
+"entail":{lv:2,pos:"verb",def:"to bring on by necessity or as a result",sentence:"Building a replica of the Taj Mahal with Lego will entail a lot of time and work."},
+"exile":{lv:2,pos:"noun",def:"long separation from one's country or home, often enforced",sentence:"The traitors of the kingdom were lucky that they were only sentenced to exile."},
+"fashion":{lv:2,pos:"noun",def:"a style of dressing",sentence:"She always wears the latest fashion."},
+"femur":{lv:2,pos:"noun",def:"the bone of the thigh, the longest bone in the body",sentence:"She had to keep the cast on for twelve weeks so the fractured femur could heal."},
+"forty":{lv:2,pos:"adjective",def:"amounting to forty in number",sentence:"There were forty children on the bus for the excursion."},
+"fraud":{lv:2,pos:"noun",def:"deliberate cheating or trickery",sentence:"The accountant was charged with fraud after cheating his clients out of their money."},
+"further":{lv:2,pos:"adverb",def:"at or to a greater distance",sentence:"You can see further than me — what does that sign in the distance say?"},
+"futon":{lv:2,pos:"noun",def:"a Japanese-style bed consisting of an unsprung mattress on a support of wooden slats",sentence:"You will find the futon quite comfortable to sleep on."},
+"giant":{lv:2,pos:"noun",def:"an imaginary creature that looks like a human but is much bigger and stronger",sentence:"When Jack got to the top of the beanstalk he got a big surprise when he saw the giant."},
+"guess":{lv:2,pos:"verb",def:"to give an answer when you don't really know",sentence:"We had to guess what the teacher was holding behind her back."},
+"guru":{lv:2,pos:"noun",def:"a wise and powerful teacher",sentence:"Thousands of people came to listen to the teachings of the guru."},
+"handful":{lv:2,pos:"noun",def:"as much or as many as the hand can contain",sentence:"Sanjay picked up a handful of peanuts as he walked out of the kitchen."},
+"haul":{lv:2,pos:"verb",def:"to pull hard",sentence:"We had to haul our heavy bags all the way up the hill."},
+"idol":{lv:2,pos:"noun",def:"a statue worshipped as a god",sentence:"The ancient tribe worshipped a golden idol as their god."},
+"impede":{lv:2,pos:"verb",def:"to slow down or block the way of",sentence:"I suspected that the heavy rains would impede the construction of my cubbyhouse."},
+"indignant":{lv:2,pos:"adjective",def:"feeling or showing anger at something you think is unjust",sentence:"She was indignant at being spoken to so rudely."},
+"industry":{lv:2,pos:"noun",def:"a large-scale business activity",sentence:"Telecommunications used to be the fastest growing industry in Australia."},
+"instead":{lv:2,pos:"adverb",def:"in place of someone or something else",sentence:"Instead of bouncing off the wall, the ball went straight through the window."},
+"issue":{lv:2,pos:"noun",def:"an important topic of discussion",sentence:"The issue of lifting water restrictions was raised at the town meeting."},
+"jaunty":{lv:2,pos:"adjective",def:"lively and confident",sentence:"His jaunty approach relaxed everybody."},
+"joist":{lv:2,pos:"noun",def:"a length of wood or metal used to support floors, ceilings or other structures",sentence:"You can see a joist running the length of the exposed ceiling."},
+"journey":{lv:2,pos:"noun",def:"the act of travelling between two places",sentence:"A driver on a long journey should stop every two hours for a break."},
+"kennel":{lv:2,pos:"noun",def:"a small building for keeping a dog warm and dry",sentence:"The kennel was full of all the things Rover had collected during the past week."},
+"kernel":{lv:2,pos:"noun",def:"the inner part of a nut which you can eat",sentence:"I had to use a nutcracker to get to the kernel of the macadamia."},
+"livestock":{lv:2,pos:"noun",def:"all the animals kept on a farm or station such as horses, cattle and sheep",sentence:"We had to move the livestock to higher ground during the flood."},
+"lounge":{lv:2,pos:"noun",def:"a sofa or couch",sentence:"Our lounge seats only two people so it was very uncomfortable with three on it."},
+"lumbar":{lv:2,pos:"adjective",def:"having to do with the lower part of the back",sentence:"The lumbar vertebrae are those in the lower part of your spine."},
+"marron":{lv:2,pos:"noun",def:"a freshwater crayfish of Western Australia",sentence:"Mum caught a huge marron in the creek this morning."},
+"mirror":{lv:2,pos:"noun",def:"glass treated so that you can see yourself reflected in it",sentence:"Dad glanced in the mirror to make sure his tie was straight."},
+"neither":{lv:2,pos:"adjective",def:"not one nor the other",sentence:"Neither colour suits me — I look awful in both orange and purple."},
+"notion":{lv:2,pos:"noun",def:"an idea, often not very clear in your mind",sentence:"Makiko had a notion that she could somehow train the dog to be obedient."},
+"ordeal":{lv:2,pos:"noun",def:"a severe test or difficulty",sentence:"Running the marathon in such heat was an ordeal."},
+"paddock":{lv:2,pos:"noun",def:"a large area of land fenced and used for grazing sheep or other animals",sentence:"During the flood, the sheep were moved to a higher paddock."},
+"patrol":{lv:2,pos:"verb",def:"to go regularly around a place to make sure there is no trouble",sentence:"Guards patrol the perimeter every fifteen minutes."},
+"piece":{lv:2,pos:"noun",def:"a bit or part of something",sentence:"Who would like a piece of cake?"},
+"thief":{lv:2,pos:"noun",def:"someone who steals",sentence:"Oh no! A thief has taken my bag!"},
+"thimble":{lv:2,pos:"noun",def:"a protective cover for the top of the finger worn when sewing",sentence:"I use a thimble when I sew so I don't prick my finger."},
+"unity":{lv:2,pos:"noun",def:"a feeling of agreement in a group",sentence:"After much disagreement in the committee, unity was finally reached."},
+"upkeep":{lv:2,pos:"noun",def:"the work or cost of looking after something or someone",sentence:"The upkeep of a dog is much more than the upkeep of a guinea pig."},
+"veal":{lv:2,pos:"noun",def:"meat from a young cow",sentence:"Dad's cooking an Italian meal with some veal."},
+"velvet":{lv:2,pos:"noun",def:"a kind of soft, slightly furry fabric",sentence:"The magician wore a cloak of dark-blue velvet."},
+"vibrate":{lv:2,pos:"verb",def:"to shake backwards and forwards quickly",sentence:"The boat began to vibrate when the captain started the engine."},
+"virus":{lv:2,pos:"noun",def:"a very tiny living thing that causes disease and is easily caught from someone else",sentence:"The common cold is a virus."},
+"voucher":{lv:2,pos:"noun",def:"a piece of paper that shows what you are entitled to receive",sentence:"Each club was given a two hundred dollar voucher to buy new sports equipment."},
+"anthem":{lv:2,pos:"noun",def:"a song that you sing at important times or events",sentence:"Australia's national anthem is Advance Australia Fair."},
+"cello":{lv:2,pos:"noun",def:"a stringed instrument held upright on the floor between the knees of the player",sentence:"The cello is an instrument with a lovely deep sound."},
+"fanfare":{lv:2,pos:"noun",def:"a short, loud piece of music usually played on trumpets",sentence:"The trumpeters played a fanfare when the queen entered the room."},
+"farce":{lv:2,pos:"noun",def:"a comedy in which the humour depends on a ridiculous and unlikely situation",sentence:"I'd much rather go to see a farce than a tragedy."},
+"grammar":{lv:2,pos:"noun",def:"the parts of a language and the way they are combined into phrases and sentences",sentence:"It's good to know about grammar when you study a foreign language."},
+"poetry":{lv:2,pos:"noun",def:"the art of writing or speaking in rhythmical verse",sentence:"I love reading poetry but I'm not very good at writing it."},
+"script":{lv:2,pos:"noun",def:"the words written down for the actors to say in a play or film",sentence:"I practised my part for the play by reading the script."},
+"stencil":{lv:2,pos:"noun",def:"a thin sheet cut so as to reproduce a design when colour is rubbed through it",sentence:"We used a metal stencil to create the base pattern of the artwork."},
+"suffix":{lv:2,pos:"noun",def:"a word part added to the end of a word",sentence:"Adding a suffix to the end of a word often changes its meaning."},
+"theme":{lv:2,pos:"noun",def:"the main subject of a book, speech or piece of music",sentence:"The theme of his speech was the protection of the natural environment."},
+"breakfast":{lv:2,pos:"noun",def:"the first meal of the day",sentence:"My brother has two bowls of cereal for breakfast every morning."},
+"health":{lv:2,pos:"noun",def:"the general state of your body",sentence:"Eating fresh fruit and vegetables is a necessity for good health."},
+"mushroom":{lv:2,pos:"noun",def:"a type of fungus with a round top growing on a stem which you can eat",sentence:"My favourite mushroom is the portobello but I do love all types."},
+"orchard":{lv:2,pos:"noun",def:"a farm where fruit trees are grown",sentence:"The orchard was full of apple trees."},
+"salami":{lv:2,pos:"noun",def:"a kind of sausage with a strong salty taste",sentence:"It will be a simple picnic of bread and salami."},
+"simmer":{lv:2,pos:"verb",def:"to cook in a liquid just below boiling point",sentence:"The sauce had to simmer for ten minutes before the pasta could be mixed through."},
+"swallow":{lv:2,pos:"verb",def:"to take something into the stomach through the throat",sentence:"She had a drink of water to help her swallow the tablet."},
+"tofu":{lv:2,pos:"noun",def:"a food made from white soya beans",sentence:"My curry was full of vegetables and tofu."},
+"alpine":{lv:2,pos:"adjective",def:"having to do with high, mountainous country",sentence:"Alpine wildflowers are very delicate."},
+"climate":{lv:2,pos:"noun",def:"the usual weather of a particular place",sentence:"The climate in Australia is generally quite warm and sunny."},
+"cyclone":{lv:2,pos:"noun",def:"a storm with very strong winds",sentence:"The roof of their house was torn off in the cyclone."},
+"grotto":{lv:2,pos:"noun",def:"a cave",sentence:"The scuba diver took his mask off when he surfaced inside the grotto."},
+"iceberg":{lv:2,pos:"noun",def:"a large mass of ice broken off from a glacier and floating in the sea",sentence:"It shocked me to learn that around ninety percent of an iceberg is under the surface."},
+"mangrove":{lv:2,pos:"noun",def:"an area where trees grow on mudflats",sentence:"The mangrove area of the Murray River supports a huge diversity of plant and animal life."},
+"tempest":{lv:2,pos:"noun",def:"a violent storm",sentence:"The story is about a ship that was wrecked during a wild tempest."},
+"bisect":{lv:2,pos:"verb",def:"to cut or divide into two equal parts",sentence:"You'll get a much better result if you use a compass to bisect the line."},
+"breadth":{lv:2,pos:"noun",def:"the distance from one side of something to the other",sentence:"The breadth of the lake is about one hundred metres."},
+"electron":{lv:2,pos:"noun",def:"a very tiny particle which moves around the nucleus in all atoms",sentence:"The hydrogen atom has only one electron."},
+"engine":{lv:2,pos:"noun",def:"a machine that changes energy from petrol or steam into movement",sentence:"Our car's engine stopped because we had run out of petrol."},
+"finite":{lv:2,pos:"adjective",def:"having limits which can be measured or counted",sentence:"Do you think the number of stars in the universe is finite?"},
+"fraction":{lv:2,pos:"noun",def:"a part of a whole number",sentence:"At school, we are learning how to multiply a number by a fraction."},
+"theory":{lv:2,pos:"noun",def:"a suggested explanation with little or no basis in fact",sentence:"They had to undertake a lot of research to prove their theory."},
+"captain":{lv:2,pos:"noun",def:"someone who is in charge of a sporting team",sentence:"I'm hoping to be chosen as the captain of our cricket team this season."},
+"champion":{lv:2,pos:"noun",def:"someone who holds first place in a sport or contest",sentence:"Ian Thorpe is an Australian swimming champion who won five Olympic gold medals."},
+"energy":{lv:2,pos:"noun",def:"the ability to be vigorous and active",sentence:"I didn't have any energy left after the fifty kilometre bike ride."},
+"gallop":{lv:2,pos:"noun",def:"the fastest pace a horse can run at",sentence:"The horse broke into a gallop and raced across the paddock."},
+"goggles":{lv:2,pos:"plural noun",def:"spectacles worn to protect the eyes from wind, dust, water, etc.",sentence:"You need to make sure the strap of your goggles fits tightly enough so water doesn't get in."},
+"holiday":{lv:2,pos:"noun",def:"a day's break from work or school to celebrate or remember an important event",sentence:"We have a public holiday to celebrate the beginning of the new year."},
+"innings":{lv:2,pos:"noun",def:"a team's turn at batting in cricket",sentence:"We made one hundred and thirty six runs in the first innings."},
+"jockey":{lv:2,pos:"noun",def:"someone who professionally rides horses in races",sentence:"He loved horses and thought that one day he might become a jockey."},
+"judo":{lv:2,pos:"noun",def:"a Japanese art of self-defence which is practised as a sport",sentence:"When you fall in judo, you roll to avoid being hurt."},
+"rodeo":{lv:2,pos:"noun",def:"an event in which people compete in riding horses and lassoing cattle",sentence:"When the rodeo is in town, everyone comes to watch."},
+"swimsuit":{lv:2,pos:"noun",def:"an item of clothing to wear when you are swimming",sentence:"She bought a new swimsuit because she was going on a beach holiday."},
+"abdomen":{lv:3,pos:"noun",def:"the main part of the body that contains the stomach and other organs",sentence:"She saw the doctor about the pain in her abdomen."},
+"accomplished":{lv:3,pos:"adjective",def:"highly skilled",sentence:"Jonathan was an accomplished pianist by the time he was seven."},
+"affluent":{lv:3,pos:"adjective",def:"wealthy or rich",sentence:"Australia is a relatively affluent country with few people living in extreme poverty."},
+"agile":{lv:3,pos:"adjective",def:"quick, lively and active",sentence:"The circus performer was an agile acrobat."},
+"animation":{lv:3,pos:"noun",def:"the process of preparing moving cartoons",sentence:"The computer animation in the cartoon film was amazing."},
+"arboreal":{lv:3,pos:"adjective",def:"having to do with, or living in, trees",sentence:"Koalas are arboreal animals, so are more comfortable up a tree than on the ground."},
+"aromatic":{lv:3,pos:"adjective",def:"having a pleasant smell",sentence:"The heated aromatic oil made the whole house smell pleasant."},
+"balcony":{lv:3,pos:"noun",def:"a small verandah, usually up high",sentence:"We stood on the balcony and watched the parade pass by."},
+"betrayal":{lv:3,pos:"noun",def:"the act of deceiving someone by doing something without their knowledge",sentence:"She was deeply hurt by her friend's betrayal."},
+"bonsai":{lv:3,pos:"noun",def:"a tree grown in a special way that keeps it very small",sentence:"We have a very small bonsai in a pot on our coffee table."},
+"brackish":{lv:3,pos:"adjective",def:"slightly salty",sentence:"Mangroves can grow in brackish water."},
+"bravado":{lv:3,pos:"noun",def:"bravery and confidence which is often pretended",sentence:"She was full of bravado until the time came for her to sing."},
+"brusque":{lv:3,pos:"adjective",def:"quick to say something and not very polite",sentence:"His brusque manner sometimes upsets people."},
+"carnivore":{lv:3,pos:"noun",def:"an animal that eats mostly meat",sentence:"The lion is a carnivore that attacks its prey with ferocity."},
+"cautious":{lv:3,pos:"adjective",def:"taking great care when there is danger",sentence:"You have to be cautious walking on these slippery wet tiles."},
+"cavernous":{lv:3,pos:"adjective",def:"like a huge, deep cave",sentence:"Our voices echoed in the empty, cavernous hall."},
+"clearance":{lv:3,pos:"noun",def:"the space between two things",sentence:"The boat only had a clearance of thirty centimetres under the bridge."},
+"clique":{lv:3,pos:"noun",def:"a small group of people who keep themselves apart from others",sentence:"The group formed a tight little clique and would not let anybody else join them."},
+"concerted":{lv:3,pos:"adjective",def:"done together in an organised way",sentence:"We put in a concerted effort to finish the job on time."},
+"epidemic":{lv:3,pos:"noun",def:"a lot of cases of an illness in a short period of time",sentence:"Before vaccinations, an epidemic of flu could kill thousands of people."},
+"festivity":{lv:3,pos:"noun",def:"a joyful celebration or occasion",sentence:"The festivity had to wait until all of the work was done."},
+"forthright":{lv:3,pos:"adjective",def:"speaking your mind openly and honestly",sentence:"I found his forthright approach very refreshing."},
+"juncture":{lv:3,pos:"noun",def:"a particular point in time",sentence:"At the most important juncture in the whole evening, the electricity suddenly went off."},
+"khaki":{lv:3,pos:"noun",def:"a greenish-brown colour, used especially for soldiers' uniforms",sentence:"The khaki of the soldiers' uniforms blended so well with the foliage that it was hard to spot them."},
+"kimono":{lv:3,pos:"noun",def:"a wide-sleeved Japanese robe which is tied at the waist",sentence:"My friend brought me back a red silk kimono from Tokyo."},
+"manifesto":{lv:3,pos:"noun",def:"a public statement by a government or group, setting out its ideas or goals",sentence:"The government issued its manifesto for their coming term."},
+"marsupial":{lv:3,pos:"noun",def:"a mammal such as a kangaroo which keeps its young in a pouch for a few months after birth",sentence:"The kangaroo is a marsupial as well as the wallaby, the koala and the possum."},
+"metallic":{lv:3,pos:"adjective",def:"relating to or consisting of metal",sentence:"There was a loud metallic clang as my keys fell down the drain."},
+"monotony":{lv:3,pos:"noun",def:"lack of change or variety, which produces boredom",sentence:"The road was straight for hundreds of kilometres with nothing to relieve the monotony."},
+"monstrosity":{lv:3,pos:"noun",def:"something which is extremely ugly or unsightly",sentence:"The new town hall was supposed to be an elegant design but everyone thought it was a monstrosity."},
+"nominee":{lv:3,pos:"noun",def:"someone put forward to fill an office or stand for election",sentence:"The office put my name forward as a nominee for president of the association."},
+"obviously":{lv:3,pos:"adverb",def:"clearly and plainly",sentence:"Luca had been waiting for hours and was obviously feeling very impatient."},
+"paradox":{lv:3,pos:"noun",def:"someone or something which seems to show contradictions",sentence:"It's a paradox that there should be poverty in such a rich country."},
+"patronage":{lv:3,pos:"noun",def:"the financial support that customers bring to a shop or hotel",sentence:"The patronage of the shop triples on the weekends."},
+"pedestal":{lv:3,pos:"noun",def:"a support for a statue or the like",sentence:"The statue's pedestal bore a plaque with information about the sculptor."},
+"permanent":{lv:3,pos:"adjective",def:"lasting forever",sentence:"The city needs a permanent water supply."},
+"personality":{lv:3,pos:"noun",def:"strong and interesting qualities of character",sentence:"He always enjoyed Meredith's company because she had such a vibrant personality."},
+"phantom":{lv:3,pos:"noun",def:"the spirit of a dead person imagined as wandering among living people",sentence:"In the play, there was a phantom who dwelt in the sewers below the opera house."},
+"plague":{lv:3,pos:"noun",def:"any serious disease which spreads very quickly",sentence:"We saw a film about the plague that killed thousands of people in London in the seventeenth century."},
+"plantation":{lv:3,pos:"noun",def:"a farm, especially in tropical areas where crops such as coffee, sugar or cotton are grown",sentence:"It's amazing how many types of tea are grown at the plantation."},
+"pliable":{lv:3,pos:"adjective",def:"flexible or easily bent",sentence:"He rubbed oil into the leather until it was soft and pliable."},
+"pragmatic":{lv:3,pos:"adjective",def:"concerned with practical consequences or values",sentence:"She tried to be pragmatic about the situation to achieve a realistic outcome."},
+"precaution":{lv:3,pos:"noun",def:"something done in advance to prevent problems",sentence:"They took chains as a precaution for driving in the snow."},
+"president":{lv:3,pos:"noun",def:"the elected head of a republic",sentence:"If Australia becomes a republic we will have a president instead of a prime minister."},
+"prevalent":{lv:3,pos:"adjective",def:"widespread",sentence:"Snakes seem to be more prevalent this summer."},
+"prolific":{lv:3,pos:"adjective",def:"producing plentifully",sentence:"He is a prolific author, publishing a novel every year."},
+"protection":{lv:3,pos:"noun",def:"the act of keeping safe",sentence:"Vitamin C helps give protection against colds."},
+"quadruped":{lv:3,pos:"noun",def:"an animal with four feet",sentence:"The horse is a powerful quadruped that can run at high speeds."},
+"recognition":{lv:3,pos:"noun",def:"the act of recognising",sentence:"He showed no recognition of her after all those years."},
+"reluctant":{lv:3,pos:"adjective",def:"unwilling",sentence:"We were reluctant to go outside because it was so cold."},
+"renovate":{lv:3,pos:"verb",def:"to restore to good condition or repair",sentence:"We plan to renovate the new house before we move in."},
+"republican":{lv:3,pos:"adjective",def:"having to do with a nation that is not ruled by a monarch",sentence:"A republican government does not have a king or queen."},
+"restraint":{lv:3,pos:"noun",def:"a holding back of feelings",sentence:"She showed considerable restraint in a potentially explosive situation."},
+"reticent":{lv:3,pos:"adjective",def:"not inclined to speak freely",sentence:"The suspect seemed very reticent to discuss the source of the money."},
+"retrospect":{lv:3,pos:"noun",def:"contemplation of the past",sentence:"It is often easy to think of a clever thing to say in retrospect, when it's too late!"},
+"royalty":{lv:3,pos:"noun",def:"kings, queens and members of their families",sentence:"It was a great honour to attend the dinner held for the visiting royalty."},
+"sacrifice":{lv:3,pos:"verb",def:"to give up something important or valuable for the sake of something else",sentence:"He was happy to sacrifice his chance of winning to help his friend."},
+"sarcastic":{lv:3,pos:"adjective",def:"using harsh or bitter derision or irony",sentence:"You're up early, she said in a sarcastic voice, it's not even lunch time yet."},
+"sedentary":{lv:3,pos:"adjective",def:"relating to or needing a sitting position",sentence:"If you have a sedentary job you should make time for some exercise."},
+"seminar":{lv:3,pos:"noun",def:"a meeting of students engaged in advanced study under a professor or lecturer",sentence:"I'd better hurry — there's a seminar on the effects of wind farms that I don't want to miss."},
+"sensitive":{lv:3,pos:"adjective",def:"easily influenced or affected",sentence:"She was sensitive about being the shortest person in the class."},
+"sincere":{lv:3,pos:"adjective",def:"having and expressing true feelings",sentence:"He was sincere in his offer to help paint the fence and was there early the next morning with his paintbrush."},
+"situation":{lv:3,pos:"noun",def:"the way things are in a particular time or place, or for a particular person",sentence:"Grace's situation is that she has sprained her ankle and can't play this week."},
+"solitude":{lv:3,pos:"noun",def:"a state of being alone",sentence:"When my dog feels like solitude, he goes under the house."},
+"sporadic":{lv:3,pos:"adjective",def:"irregular and not very frequent",sentence:"Sadly, my visits to the gym are only sporadic."},
+"substantial":{lv:3,pos:"adjective",def:"large or solid",sentence:"He lost a substantial fortune in the stock market crash."},
+"superfluous":{lv:3,pos:"adjective",def:"more than is needed",sentence:"We'll freeze any superfluous food so none of it will go to waste."},
+"tendency":{lv:3,pos:"noun",def:"a natural movement in some direction or towards some point, end or result",sentence:"She had a tendency to be stubborn and she refused to give up."},
+"terrible":{lv:3,pos:"adjective",def:"very bad",sentence:"She had a terrible pain in her leg after walking into the table."},
+"theology":{lv:3,pos:"noun",def:"the study of religion",sentence:"He liked religious studies so much he thought he should go on to study theology at university."},
+"thoughtful":{lv:3,pos:"adjective",def:"considerate",sentence:"It was very thoughtful of him to lend me his umbrella."},
+"tradition":{lv:3,pos:"noun",def:"the handing down of beliefs, legends or customs from generation to generation",sentence:"Songs and stories are ways in which people pass down a tradition."},
+"transition":{lv:3,pos:"noun",def:"a passing from one position, state or stage to another",sentence:"The transition from primary school to high school is an exciting time."},
+"tremendous":{lv:3,pos:"adjective",def:"very large or important",sentence:"She was offered a tremendous opportunity to work overseas."},
+"trivial":{lv:3,pos:"adjective",def:"unimportant",sentence:"He couldn't stand to be bothered with trivial details."},
+"turmoil":{lv:3,pos:"noun",def:"wild disorder",sentence:"The school was in turmoil when the blackout happened."},
+"tutorial":{lv:3,pos:"noun",def:"a period of instruction given by a university tutor to a student or small group",sentence:"The first tutorial was to discuss the aims of the course."},
+"twilight":{lv:3,pos:"noun",def:"the weak light in the sky just after sunset, before it becomes completely dark",sentence:"In the twilight he could just make out the boat as it came back into the harbour."},
+"ultimate":{lv:3,pos:"adjective",def:"final or most important",sentence:"The ultimate objective is to get to the finals."},
+"umbrella":{lv:3,pos:"noun",def:"a shade or screen used for protection from sunlight or rain",sentence:"We forgot the umbrella so we were very wet by the time we got home."},
+"underlying":{lv:3,pos:"adjective",def:"fundamental",sentence:"The underlying problem was that there were not enough resources to go around."},
+"unison":{lv:3,pos:"noun",def:"singing or speaking the same thing all together",sentence:"It is usually easier for a choir to sing in unison than to sing in separate parts."},
+"universal":{lv:3,pos:"adjective",def:"including and affecting everyone, everything and every place",sentence:"He was a person who was held in universal respect."},
+"urgency":{lv:3,pos:"noun",def:"a sense that something is pressing and requiring immediate action or attention",sentence:"We could all feel the sense of urgency to get to the airport on time."},
+"variable":{lv:3,pos:"adjective",def:"likely to change",sentence:"The weather at this time of year is extremely variable."},
+"vertigo":{lv:3,pos:"noun",def:"a feeling of dizziness, often experienced when looking down from a high place",sentence:"People who suffer from vertigo shouldn't go mountain climbing."},
+"vindicate":{lv:3,pos:"verb",def:"to show to be right or innocent",sentence:"The father longed for evidence to be found which would vindicate his son."},
+"vintage":{lv:3,pos:"adjective",def:"old-fashioned",sentence:"My grandpa has spent years restoring vintage cars."},
+"vitality":{lv:3,pos:"noun",def:"energy or vigour",sentence:"The music the violinist played was chosen to show off the vitality he was famous for."},
+"voluntary":{lv:3,pos:"adjective",def:"unpaid, and done or made by choice",sentence:"The zoo is advertising for voluntary helpers."},
+"voyage":{lv:3,pos:"noun",def:"a journey by sea to somewhere quite far away",sentence:"At school we learned about the greatest sea voyage of all."},
+"wastage":{lv:3,pos:"noun",def:"loss by use, wear, decay or wastefulness",sentence:"The state government has started a campaign to minimise water wastage."},
+"widespread":{lv:3,pos:"adjective",def:"spread over a wide space",sentence:"There was widespread flooding after the week of heavy rain."},
+"wondrous":{lv:3,pos:"adjective",def:"wonderful or marvellous",sentence:"He saw many wondrous sights on his trip to South America."},
+"zodiac":{lv:3,pos:"noun",def:"a part of the sky containing twelve constellations used in astrology",sentence:"Her sign of the zodiac was Aries but she would have liked to have been Aquarius."},
+"zoology":{lv:3,pos:"noun",def:"the science or study of animal life",sentence:"My brother is passionate about animals and is studying zoology at university."},
+"acoustics":{lv:3,pos:"noun",def:"the properties of a room which affect the quality of the sounds produced in it",sentence:"We tested the acoustics of different rooms to see which would be the best for the band rehearsal."},
+"ceramics":{lv:3,pos:"noun",def:"the craft of making things out of clay",sentence:"When we do ceramics in art, the teacher always operates the kiln."},
+"dialect":{lv:3,pos:"noun",def:"a variety of a language spoken in a particular area or by a particular group of people",sentence:"Australian English is a regional dialect of English."},
+"dictionary":{lv:3,pos:"noun",def:"a book with an alphabetical list of words, their meanings, and other information",sentence:"If you don't know the meaning of a word you can look it up in a dictionary."},
+"imagery":{lv:3,pos:"noun",def:"the technique through which a writer creates pictures in the reader's mind",sentence:"The writer's clever use of imagery brings the scenery to life."},
+"irony":{lv:3,pos:"noun",def:"a humorous way of speaking in which the real meaning is the opposite of what is said",sentence:"Great! she said with irony when she saw the muddy paw prints on her white skirt."},
+"narrative":{lv:3,pos:"noun",def:"a piece of writing that tells a story",sentence:"Her narrative was about two children who got lost but managed to find their way home."},
+"paragraph":{lv:3,pos:"noun",def:"a block of writing dealing with a particular subject and beginning on a new line",sentence:"The first paragraph of the mystery story made us want to read more."},
+"parody":{lv:3,pos:"noun",def:"a humorous copy of a serious piece of writing or music",sentence:"They turned the famous novel into a very funny musical parody for their school play."},
+"prologue":{lv:3,pos:"noun",def:"a speech at the beginning of a play",sentence:"The prologue was very witty and had the audience laughing out loud."},
+"rendering":{lv:3,pos:"noun",def:"an interpretation of a drama, piece of music, or similar",sentence:"The reviews said that we gave a lively rendering of the Pirates of Penzance."},
+"sequel":{lv:3,pos:"noun",def:"a book or film which continues on from an earlier work",sentence:"It was so disappointing that the sequel was such a flop — the original was so good!"},
+"calorie":{lv:3,pos:"noun",def:"a measurement of the energy value of food",sentence:"Counting every calorie is a really boring way to diet."},
+"condiment":{lv:3,pos:"noun",def:"something used to give an extra taste to food, such as a sauce or seasoning",sentence:"Tomato sauce is the only condiment my dad ever uses."},
+"culinary":{lv:3,pos:"adjective",def:"relating to cooking",sentence:"His culinary skills had improved after attending cooking classes."},
+"glucose":{lv:3,pos:"noun",def:"a natural sugar which is the major energy source for most living cells",sentence:"Honey is one of the best sources of glucose."},
+"nourish":{lv:3,pos:"verb",def:"to provide with food or other substances needed for growth and health",sentence:"A diet of ice cream and peanut butter is not sufficient to nourish anybody!"},
+"oregano":{lv:3,pos:"noun",def:"a herb of the mint family, used in cooking",sentence:"The pizza just needed a pinch of oregano added before going in the oven."},
+"organic":{lv:3,pos:"adjective",def:"having to do with farming without chemicals",sentence:"They only use organic fertilisers on their crops."},
+"palatable":{lv:3,pos:"adjective",def:"reasonably pleasant to taste",sentence:"The dessert was a disaster — it was only made palatable by a big dollop of ice cream."},
+"perishable":{lv:3,pos:"adjective",def:"likely to decay quickly",sentence:"Perishable food should be kept in the refrigerator."},
+"protein":{lv:3,pos:"noun",def:"a substance found in foods such as meat and cheese, which is important to our health",sentence:"Meat, fish and eggs are all good sources of protein."},
+"restaurant":{lv:3,pos:"noun",def:"a place where meals are served to customers",sentence:"Because it's Dad's birthday he gets to choose which restaurant we eat at."},
+"risotto":{lv:3,pos:"noun",def:"an Italian dish made of rice mixed with meat, fish or vegetables",sentence:"Risotto with prawns is one of my favourite dishes."},
+"wholesome":{lv:3,pos:"adjective",def:"healthy and good for you",sentence:"I bought a wholesome lunch of salad and fresh fruit juice."},
+"conservation":{lv:3,pos:"noun",def:"the protection of natural areas, plants and animals, as well as buildings of historical interest",sentence:"This political party is concerned about the conservation of our natural environment."},
+"environment":{lv:3,pos:"noun",def:"all the surrounding features and conditions of an area, including the land, trees, water and air",sentence:"Pollution has a bad effect on the whole environment."},
+"habitat":{lv:3,pos:"noun",def:"the place where a plant, animal or fish naturally lives or grows",sentence:"The natural habitat of the bandicoot features long grass and shrubs."},
+"typhoon":{lv:3,pos:"noun",def:"a violent storm like a cyclone or hurricane",sentence:"The typhoon ripped across the island, uprooting all the trees in its path."},
+"calculator":{lv:3,pos:"noun",def:"a small machine that you can use to do sums",sentence:"I would rather use a calculator than work out problems in my head."},
+"component":{lv:3,pos:"noun",def:"a part of a whole",sentence:"A microchip is just one component of a motherboard."},
+"diagonal":{lv:3,pos:"adjective",def:"a sloping line joining the opposite corners of a rectangle or square",sentence:"If you draw a diagonal line between the opposite corners of a square, you will make two triangles."},
+"geometry":{lv:3,pos:"noun",def:"the part of mathematics that studies shapes such as squares and triangles",sentence:"Today in our geometry class, we learned how to draw a circle with a compass."},
+"molecule":{lv:3,pos:"noun",def:"the smallest unit into which something can be divided without changing its features",sentence:"A molecule of water is made up of two atoms of hydrogen and one atom of oxygen."},
+"momentum":{lv:3,pos:"noun",def:"the force with which something is moving",sentence:"It was hard to stop the billycart once it had picked up momentum."},
+"procedure":{lv:3,pos:"noun",def:"instructions which tell how to do or make something step by step",sentence:"The procedure for our science experiment was written clearly on the whiteboard."},
+"athletics":{lv:3,pos:"noun",def:"events that take place on a track, such as running and hurdling, javelin throwing and the high jump",sentence:"The athletics at the Olympic Games are exciting to watch."},
+"competition":{lv:3,pos:"noun",def:"a situation in which people compete against each other",sentence:"The grand final of our school handball competition is this Friday."},
+"contestant":{lv:3,pos:"noun",def:"someone who takes part in a competition",sentence:"The second contestant in the shot-put walked into the circle."},
+"enjoyment":{lv:3,pos:"noun",def:"the state of taking pleasure or satisfaction in something",sentence:"Surrounding myself with kittens brings me great enjoyment!"},
+"lifeguard":{lv:3,pos:"noun",def:"someone whose job it is to rescue swimmers at a pool or beach who are in difficulty",sentence:"The lifeguard was trained in resuscitation."},
+"premiership":{lv:3,pos:"noun",def:"a sporting championship",sentence:"We were overjoyed to hear that our soccer team had won the premiership."},
+"trampoline":{lv:3,pos:"noun",def:"a frame with tightly stretched material attached to it by springs, on which you can jump for fun",sentence:"Only two children are allowed to jump on the trampoline at the one time."},
+"vacation":{lv:3,pos:"noun",def:"a time when you do not have to go to school",sentence:"I'm hoping to go camping on my next vacation."},
+"aerosol":{lv:4,pos:"noun",def:"a substance made up of tiny particles mixed into a gas",sentence:"To protect us against mosquitoes on the bushwalk, we took an aerosol as well as a cream insect repellent."},
+"allergy":{lv:4,pos:"noun",def:"an unusual sensitivity to things that are normally harmless, like pollen, dust and certain foods",sentence:"Some people have an allergy to wattle."},
+"alternative":{lv:4,pos:"noun",def:"one of two or more choices",sentence:"Going by public transport is a better alternative than taking a car."},
+"ambiguous":{lv:4,pos:"adjective",def:"unclear, due to having more than one meaning",sentence:"As the question was quite ambiguous, we had to ask the teacher to explain what she meant."},
+"anticipation":{lv:4,pos:"noun",def:"the act of anticipating",sentence:"The anticipation of waiting for my results made me very nervous."},
+"apologetic":{lv:4,pos:"adjective",def:"full of regret, or showing that you are sorry",sentence:"He was apologetic about the way he had behaved at the party."},
+"applicable":{lv:4,pos:"adjective",def:"suitable or able to be used",sentence:"This rule is only applicable to Year 7 students."},
+"approximate":{lv:4,pos:"adjective",def:"fairly accurate but not completely exact",sentence:"The approximate time of departure is eleven a.m."},
+"argumentative":{lv:4,pos:"adjective",def:"liking to argue or quarrelsome",sentence:"She was known for her argumentative personality."},
+"ascertain":{lv:4,pos:"verb",def:"to find out or determine as true",sentence:"The detectives managed to ascertain that the suspect had been at the scene of the crime."},
+"association":{lv:4,pos:"noun",def:"a group of people interested in the same thing",sentence:"Mum belongs to an association that raises money for hospitals."},
+"assumption":{lv:4,pos:"noun",def:"something you take for granted",sentence:"The assumption that chocolate is bad for you is luckily not entirely true."},
+"attorney":{lv:4,pos:"noun",def:"a person appointed by someone to do legal business for them",sentence:"We had our attorney review the contract before we signed it."},
+"attractive":{lv:4,pos:"adjective",def:"pleasing",sentence:"There were a lot of attractive qualities about moving to the country."},
+"audacity":{lv:4,pos:"noun",def:"boldness or daring, especially careless boldness",sentence:"We were all amazed that she had the audacity to argue with the teacher."},
+"authenticate":{lv:4,pos:"verb",def:"to prove to be genuine",sentence:"The archaeologists will authenticate the age of the fossil."},
+"aviation":{lv:4,pos:"noun",def:"the science or act of flying in an aircraft",sentence:"The air force had an exhibition on the history of aviation."},
+"barbarian":{lv:4,pos:"noun",def:"someone with bad manners and not much education",sentence:"Everyone thought he was a barbarian for eating his chicken with his hands."},
+"barramundi":{lv:4,pos:"noun",def:"a large silver-grey fish which is good to eat",sentence:"We caught a huge barramundi when we went fishing in Darwin."},
+"benefactor":{lv:4,pos:"noun",def:"someone who gives help or money to those who need it",sentence:"The hospital was able to open a new ward because of a gift from a benefactor."},
+"bewilderment":{lv:4,pos:"noun",def:"a state of complete confusion",sentence:"We looked at our friend in bewilderment when he started speaking in what he said was Klingon."},
+"biodegradable":{lv:4,pos:"adjective",def:"able to be broken down by the action of very small living things like bacteria",sentence:"We buy biodegradable soap powder to minimise its effect on the environment."},
+"buccaneer":{lv:4,pos:"noun",def:"a pirate",sentence:"In the film, the sailors' boat was hijacked by a daring buccaneer."},
+"burglary":{lv:4,pos:"noun",def:"the crime of breaking into a building to steal things",sentence:"We were worried because there had been a burglary in the building next door."},
+"capability":{lv:4,pos:"noun",def:"the power or skill to be able to do something",sentence:"He had the knowledge and capability to cook, but was lazy."},
+"categorical":{lv:4,pos:"adjective",def:"clear, plain, and direct",sentence:"Her statement was categorical — there was no doubt about its meaning."},
+"caterpillar":{lv:4,pos:"noun",def:"the worm-like larva of a moth or butterfly",sentence:"It's hard to believe that this big black caterpillar will become a beautiful butterfly."},
+"ceremonial":{lv:4,pos:"adjective",def:"belonging to or used for a ceremony",sentence:"The ceremonial gowns worn by the professors looked very impressive."},
+"clemency":{lv:4,pos:"noun",def:"mercy or leniency",sentence:"We pleaded with my mother to show clemency to the naughty puppy."},
+"commentary":{lv:4,pos:"noun",def:"a description of a public event broadcast or televised as it happens",sentence:"The commentary accompanying the swimming finals made it even more exciting to watch."},
+"competence":{lv:4,pos:"noun",def:"the quality of being capable or competent",sentence:"The surgeon's competence was known throughout the world."},
+"conceited":{lv:4,pos:"adjective",def:"too proud of yourself or of your own abilities",sentence:"Unfortunately, his huge success as a writer has made him very conceited."},
+"conclusive":{lv:4,pos:"adjective",def:"final and not able to be changed",sentence:"Not only did they win the game, it was a very conclusive victory."},
+"consequence":{lv:4,pos:"noun",def:"a result",sentence:"A consequence of their forgetfulness is that they are now stuck in the rain without an umbrella."},
+"conspiracy":{lv:4,pos:"noun",def:"a secret plot planned by a number of people",sentence:"There was a conspiracy to give our teacher a surprise birthday party."},
+"constructive":{lv:4,pos:"adjective",def:"helpful or useful",sentence:"If you haven't got anything constructive to say, don't say anything!"},
+"controversial":{lv:4,pos:"adjective",def:"subject to different points of view; debatable",sentence:"The political party was divided about the controversial issue."},
+"coronation":{lv:4,pos:"noun",def:"the ceremony at which a person becomes king or queen",sentence:"The press were eager to get as many photos at the coronation of the prince as possible."},
+"counterfeit":{lv:4,pos:"adjective",def:"made to look exactly like something else in an attempt to deceive people",sentence:"The police were on the lookout for counterfeit fifty dollar notes."},
+"credential":{lv:4,pos:"noun",def:"something which gives the right to belief or trust",sentence:"The recommendation was the only credential she needed."},
+"deliberately":{lv:4,pos:"adverb",def:"on purpose",sentence:"Tim deliberately missed the early train so that he could meet his friends on the station."},
+"detriment":{lv:4,pos:"noun",def:"loss, damage, or injury",sentence:"She concentrated on studying history, to the detriment of her other subjects."},
+"disposition":{lv:4,pos:"noun",def:"your personality or particular character",sentence:"It's always nice to be around my friend — she has such a cheerful disposition."},
+"distraught":{lv:4,pos:"adjective",def:"very worried or upset",sentence:"The lost toddler became more and more distraught as daylight faded."},
+"electrician":{lv:4,pos:"noun",def:"someone who looks after the electrical wiring in buildings",sentence:"We had to call the electrician after the storm because the wires were damaged."},
+"eminence":{lv:4,pos:"noun",def:"a high rank or standing",sentence:"After many years of hard work, she had reached a position of eminence in her profession."},
+"enigmatic":{lv:4,pos:"adjective",def:"puzzling or difficult to interpret",sentence:"She had an enigmatic smile on her face so I couldn't tell if she was happy or not."},
+"entanglement":{lv:4,pos:"noun",def:"the action which causes something to become caught or held in a net or snare",sentence:"Dolphins and other sea creatures often die from entanglement in fishing nets."},
+"escalator":{lv:4,pos:"noun",def:"a continuously moving stairway that carries people upwards or downwards",sentence:"There were no stairs so they had to use the escalator to reach the higher level."},
+"evocative":{lv:4,pos:"adjective",def:"tending to evoke memories",sentence:"That old song is evocative of my childhood."},
+"excavation":{lv:4,pos:"noun",def:"a hole or cavity made by digging",sentence:"The excavation had to be done very slowly and carefully so none of the relics were damaged."},
+"forbearance":{lv:4,pos:"noun",def:"patient endurance",sentence:"He showed great forbearance in not reacting to the provocation."},
+"formidable":{lv:4,pos:"adjective",def:"frightening",sentence:"We were up against a formidable opponent in the finals."},
+"frivolity":{lv:4,pos:"noun",def:"lack of seriousness",sentence:"We were all looking forward to a night of fun and frivolity."},
+"gladiator":{lv:4,pos:"noun",def:"a man in ancient Rome who fought as a public entertainment",sentence:"As part of our studies of ancient civilisations, we saw a film about a gladiator."},
+"gregarious":{lv:4,pos:"adjective",def:"fond of the company of other people",sentence:"She has a gregarious nature and loves meeting new people."},
+"hilarity":{lv:4,pos:"noun",def:"boisterous cheerfulness or high spirits",sentence:"The evening was full of hilarity and laughter."},
+"hydrogen":{lv:4,pos:"noun",def:"a colourless, odourless gas",sentence:"Water is made up of hydrogen and oxygen."},
+"idyllic":{lv:4,pos:"adjective",def:"simple, peaceful and pleasant",sentence:"The house was in an idyllic position on the bank of the river."},
+"illicit":{lv:4,pos:"adjective",def:"forbidden or not legal",sentence:"The police questioned the suspect over receiving illicit goods."},
+"immeasurable":{lv:4,pos:"adjective",def:"so great as to not be able to be measured",sentence:"The oceans seem to contain immeasurable amounts of water."},
+"imperious":{lv:4,pos:"adjective",def:"arrogant or bossy",sentence:"The director's imperious manner didn't endear any of us to him."},
+"incessant":{lv:4,pos:"adjective",def:"continuing without stopping",sentence:"It was hard to hear over the incessant chatter in the cafe."},
+"independence":{lv:4,pos:"noun",def:"freedom from subjection, or from the influence of others",sentence:"Many wars have been fought in the struggle for national independence."},
+"indescribable":{lv:4,pos:"adjective",def:"too extreme to be described",sentence:"The indescribable beauty of the architecture left us speechless."},
+"inflammation":{lv:4,pos:"noun",def:"a red, painful, and often swollen area on the body, caused by an infection",sentence:"The inflammation around her knee prevented her from surfing for a month."},
+"infrastructure":{lv:4,pos:"noun",def:"the basic framework or underlying foundation",sentence:"A new motorway will improve our transport infrastructure if it goes ahead."},
+"instability":{lv:4,pos:"noun",def:"lack of firmness or steadiness",sentence:"The instability of the buildings after the earthquake meant the city had to be evacuated."},
+"intolerable":{lv:4,pos:"adjective",def:"not able to be suffered",sentence:"The pain of her broken ankle was intolerable."},
+"intuition":{lv:4,pos:"noun",def:"a strong feeling about something without any real reason that you know of",sentence:"I have no proof, but my intuition tells me that she's telling the truth."},
+"jeopardy":{lv:4,pos:"noun",def:"peril or danger",sentence:"The school excursion is in jeopardy because insurance costs so much."},
+"laborious":{lv:4,pos:"adjective",def:"needing a lot of effort",sentence:"It was a laborious climb to the top of the hill."},
+"lucrative":{lv:4,pos:"adjective",def:"producing good profits or paying well",sentence:"Walking dogs has become a lucrative job for Sarah."},
+"magician":{lv:4,pos:"noun",def:"someone who practises magic or magic tricks",sentence:"The magician was able to make a coin disappear and then appear again."},
+"marvellous":{lv:4,pos:"adjective",def:"wonderful",sentence:"We had a marvellous time at the party last night."},
+"mechanism":{lv:4,pos:"noun",def:"a piece of machinery",sentence:"The mechanism which controls the temperature in the fridge is broken."},
+"memorandum":{lv:4,pos:"noun",def:"a note made of something to remember or something to do",sentence:"The manager sent a memorandum to all staff about the new computer system."},
+"mysterious":{lv:4,pos:"adjective",def:"puzzling or full of mystery",sentence:"We were woken by mysterious noises in the night."},
+"nefarious":{lv:4,pos:"adjective",def:"very wicked",sentence:"The villain of the story was known for his nefarious activities."},
+"omnivorous":{lv:4,pos:"adjective",def:"eating both animals and plants",sentence:"We had to list the animals as herbivorous, carnivorous or omnivorous according to what they eat."},
+"petulant":{lv:4,pos:"adjective",def:"showing or feeling impatient annoyance, especially over something unimportant",sentence:"Well, I don't care anyway, she said in a petulant voice."},
+"photography":{lv:4,pos:"noun",def:"the act of producing images with a camera",sentence:"The skill involved in photography is often underestimated."},
+"precipitous":{lv:4,pos:"adjective",def:"very steep",sentence:"The slope was precipitous which made the climb hazardous."},
+"prohibitive":{lv:4,pos:"adjective",def:"of a price, too high for you to afford",sentence:"I don't know how anyone could afford the prohibitive price for that new mobile phone."},
+"rationale":{lv:4,pos:"noun",def:"a statement of reasons or principles",sentence:"We were interested to hear the council's rationale for removing barbecues from the park."},
+"refurbish":{lv:4,pos:"verb",def:"to renovate or polish up again",sentence:"Mum is looking at paint samples as she wants to refurbish her office."},
+"revelry":{lv:4,pos:"noun",def:"boisterous festivity",sentence:"The sound of the campers' revelry could be heard across the river."},
+"scholastic":{lv:4,pos:"adjective",def:"having to do with schools, students or education",sentence:"His scholastic record was so good that he thought he might get into the law course after all."},
+"serenity":{lv:4,pos:"noun",def:"a state of calm and peace",sentence:"Tai chi helps me achieve a feeling of serenity."},
+"sociology":{lv:4,pos:"noun",def:"the study of the development and organisation of human society",sentence:"It was his interest in people that led him to study sociology at university."},
+"spacious":{lv:4,pos:"adjective",def:"having a lot of space or room",sentence:"The kitchen was spacious enough to fit a table that seated six people."},
+"stringent":{lv:4,pos:"adjective",def:"strict or severe",sentence:"The principal took stringent measures to prevent truancy."},
+"stubborn":{lv:4,pos:"adjective",def:"unreasonably obstinate",sentence:"He was so stubborn that he refused to go with them despite wanting to join in."},
+"stupendous":{lv:4,pos:"adjective",def:"amazingly good",sentence:"Everyone agreed that it was a stupendous party."},
+"subterfuge":{lv:4,pos:"noun",def:"a plan or trick used to hide or avoid something",sentence:"He got the outcome he was after but he had to resort to subterfuge."},
+"succulent":{lv:4,pos:"adjective",def:"juicy",sentence:"A succulent mango is hard to eat without getting covered in juice."},
+"suspicious":{lv:4,pos:"adjective",def:"feeling that someone is doing something dishonest or secretive",sentence:"We were suspicious when we heard a window shatter followed by footsteps running down the road."},
+"sympathetic":{lv:4,pos:"adjective",def:"marked by or showing empathy and understanding",sentence:"She gave a sympathetic smile when she saw the bandage on my arm."},
+"tantamount":{lv:4,pos:"adjective",def:"equivalent, usually in value, force, effect or meaning",sentence:"Taking her purse without asking was tantamount to robbery."},
+"tranquillity":{lv:4,pos:"noun",def:"calmness, peacefulness or quiet",sentence:"The tranquillity of the mountain lake was very calming."},
+"unassuming":{lv:4,pos:"adjective",def:"modest or not making any special claims about yourself",sentence:"Her quiet unassuming manner won her many friends."},
+"vanquish":{lv:4,pos:"verb",def:"to defeat in battle",sentence:"The Roman army attempted to vanquish all their enemies."},
+"vengeance":{lv:4,pos:"noun",def:"harm done to someone in return for harm they have done to you",sentence:"The police thought the destructive fire was an act of vengeance."},
+"vulnerable":{lv:4,pos:"adjective",def:"able to be hurt or wounded",sentence:"We felt vulnerable because we did not have a torch with us and the night was pitch black."},
+"eloquent":{lv:4,pos:"adjective",def:"able to speak in a flowing, expressive manner",sentence:"Being naturally eloquent, Ann was chosen to give the opening speech."},
+"ensemble":{lv:4,pos:"noun",def:"a group of musicians, dancers, or actors who perform together",sentence:"Auditions to join the jazz ensemble are being held this Friday."},
+"epilogue":{lv:4,pos:"noun",def:"a short section at the end of a play or written work",sentence:"The epilogue gave the information that the story was based on real events."},
+"extravaganza":{lv:4,pos:"noun",def:"an entertainment event which is very colourful and elaborate",sentence:"The music festival ended with a spectacular extravaganza on the main stage."},
+"illustrator":{lv:4,pos:"noun",def:"an artist who draws pictures, especially for books",sentence:"This illustrator uses lots of bright colours."},
+"intermission":{lv:4,pos:"noun",def:"an interval, especially during a film or a concert",sentence:"There was a long queue for snacks during the intermission."},
+"journalism":{lv:4,pos:"noun",def:"the work of writing and running newspapers and magazines",sentence:"I did my work experience at the local paper as I wanted to work in journalism."},
+"literature":{lv:4,pos:"noun",def:"books, poems, plays and other forms of writing",sentence:"This year we are studying the literature of Ireland."},
+"protagonist":{lv:4,pos:"noun",def:"the main character in a story or play",sentence:"The film's protagonist was a young novelist."},
+"technique":{lv:4,pos:"noun",def:"the way of doing or performing something",sentence:"His performance showed good technique as well as flair."},
+"xylophone":{lv:4,pos:"noun",def:"a musical instrument made of a row of wooden bars of different lengths which you hit with small hammers",sentence:"He already knew how to play the piano, so he learned the xylophone very quickly."},
+"cinnamon":{lv:4,pos:"noun",def:"a spice made from the inner bark of certain trees and used in cooking",sentence:"The baker made a delicious bread roll flavoured with cinnamon."},
+"croissant":{lv:4,pos:"noun",def:"a roll of baked pastry in the shape of a crescent",sentence:"I had a croissant and a coffee every morning for breakfast when I was in France."},
+"gluttonous":{lv:4,pos:"adjective",def:"tending to eat too much",sentence:"We have to be careful not to leave any food around as our gluttonous cat will eat anything he sees!"},
+"hygienic":{lv:4,pos:"adjective",def:"clean and sanitary",sentence:"It is important to have a hygienic kitchen."},
+"indigestion":{lv:4,pos:"noun",def:"pain in the stomach caused by difficulty in digesting food",sentence:"I got indigestion from eating lots of fried food too quickly."},
+"insatiable":{lv:4,pos:"adjective",def:"never having enough",sentence:"My teenage brother seems to have an insatiable appetite."},
+"smorgasbord":{lv:4,pos:"noun",def:"a meal where you help yourself to a great variety of food laid out on a table",sentence:"The Italian seafood smorgasbord was delicious."},
+"tiramisu":{lv:4,pos:"noun",def:"an Italian dessert made by layering sponge fingers soaked in coffee and liqueur with mascarpone",sentence:"Tiramisu always looks so good, but since I don't like coffee I know I won't like the taste of it."},
+"biodiversity":{lv:4,pos:"noun",def:"a variety of species of plants and animals",sentence:"The rise in temperature is a threat to coastal biodiversity."},
+"sedimentary":{lv:4,pos:"adjective",def:"relating to rocks formed by the depositing of sediment",sentence:"Sandstone is an example of a sedimentary rock."},
+"analysis":{lv:4,pos:"noun",def:"a detailed examination of something",sentence:"The scientist's analysis of the substance showed that it was some kind of metal."},
+"chemistry":{lv:4,pos:"noun",def:"the science of what substances are made of and the ways they react with each other",sentence:"My father studied chemistry and physics at university."},
+"combustible":{lv:4,pos:"adjective",def:"able to burn",sentence:"They cleared the area of everything combustible before lighting the bonfire."},
+"evolution":{lv:4,pos:"noun",def:"the gradual continuous genetic change of plants and animals to adapt to the environment",sentence:"The evolution of birds is thought to have started with the dinosaurs."},
+"generator":{lv:4,pos:"noun",def:"a machine for producing electricity",sentence:"The hospital was able to depend on the generator when power cuts occurred."},
+"hypothesis":{lv:4,pos:"noun",def:"an idea put forward as a useful starting point for a scientific investigation",sentence:"The scientist proposed the hypothesis that the earth was much older than commonly thought."},
+"methodology":{lv:4,pos:"noun",def:"a system of procedures used in a particular area of study",sentence:"The success of the experiment was helped by a sound methodology."},
+"thermometer":{lv:4,pos:"noun",def:"an instrument for measuring temperature",sentence:"I'm not surprised we were all so hot — the thermometer said it was thirty eight degrees outside."},
+"ultraviolet":{lv:4,pos:"adjective",def:"beyond the bluish-purple end of the light spectrum",sentence:"We always put on sunscreen at the beach because the ultraviolet light rays from the sun can burn you."},
+"adversary":{lv:4,pos:"noun",def:"someone you compete against or fight with",sentence:"My old adversary beat me in the fencing tournament."},
+"catamaran":{lv:4,pos:"noun",def:"a boat with two hulls",sentence:"We spent a fantastic week sailing a catamaran around the islands."},
+"celebration":{lv:4,pos:"noun",def:"something special and enjoyable, such as going out or having a party",sentence:"We are planning a big celebration for my grandma's seventieth birthday."},
+"equestrian":{lv:4,pos:"adjective",def:"having to do with horseriding",sentence:"Jane and her horse showed great skill and stamina to win the equestrian event."},
+"gymnastics":{lv:4,pos:"noun",def:"the performance of exercises to develop flexibility, strength and agility",sentence:"We do gymnastics every week to strengthen our muscles."},
+"meditation":{lv:4,pos:"noun",def:"a practice involving reflection and contemplation",sentence:"Meditation helps me calm down if I've had a stressful day."},
+"mountaineering":{lv:4,pos:"noun",def:"the activity of climbing mountains",sentence:"You generally need good, strong ropes to go mountaineering."},
+"quarterfinal":{lv:4,pos:"noun",def:"a contest which precedes the semifinals in a tournament",sentence:"The Tamworth Tigers have to win their last two games to secure a spot in the quarterfinal."},
+"recreation":{lv:4,pos:"noun",def:"a game, hobby or sport which is an enjoyable change from your daily work",sentence:"For recreation, my brother likes to ride his bike, and I like to practise shooting goals."},
+"strategy":{lv:4,pos:"noun",def:"a plan or scheme which sets out how to achieve a goal",sentence:"Our coach said he had a brilliant strategy for defeating the opposition in the final."},
+"velodrome":{lv:4,pos:"noun",def:"an arena with sloping sides used for cycling races",sentence:"We all crowded into the velodrome to watch the Olympic cycling final."},
+"abominable":{lv:5,pos:"adjective",def:"hateful or disgusting",sentence:"Selling people into slavery was an abominable practice."},
+"accolade":{lv:5,pos:"noun",def:"praise or honour given to someone",sentence:"She deserves the highest accolade for her wonderful performance in the eisteddfod."},
+"acquisition":{lv:5,pos:"noun",def:"the act of obtaining something",sentence:"The director was delighted with the museum's acquisition of the ancient Egyptian vase."},
+"adjacent":{lv:5,pos:"adjective",def:"lying near or close to",sentence:"Most schools have pedestrian crossings adjacent to their entry gates."},
+"alleviate":{lv:5,pos:"verb",def:"to make easier to bear",sentence:"She knew that a hot bath would alleviate the soreness in her legs after such a long bushwalk."},
+"amalgamate":{lv:5,pos:"verb",def:"to join together",sentence:"The two companies decided to amalgamate and move to a new location."},
+"ambivalent":{lv:5,pos:"adjective",def:"unable to make up your mind due to conflicting feelings",sentence:"She felt ambivalent about going to the party — it would be fun, but she was very tired."},
+"anomaly":{lv:5,pos:"noun",def:"a variation from what is standard",sentence:"She never misses school so her absence from school was an anomaly."},
+"antiquated":{lv:5,pos:"adjective",def:"old-fashioned or out of date",sentence:"We thought that Grandma's washing machine was quite antiquated compared to ours."},
+"apprehensive":{lv:5,pos:"adjective",def:"afraid or uneasy about something that may happen",sentence:"They were apprehensive about walking through the dark streets."},
+"aristocracy":{lv:5,pos:"noun",def:"in some societies, the people of highest rank",sentence:"In Europe, the aristocracy once ruled the so-called lower classes."},
+"behemoth":{lv:5,pos:"noun",def:"a huge and powerful person, animal or thing",sentence:"The elephant is a behemoth of the animal world."},
+"benevolent":{lv:5,pos:"adjective",def:"desiring to do good for others",sentence:"A benevolent passer-by helped my grandmother carry her shopping to the car."},
+"buoyant":{lv:5,pos:"adjective",def:"tending to float or rise in a fluid",sentence:"This rubber ring will keep you buoyant in the water."},
+"calligraphy":{lv:5,pos:"noun",def:"the art of doing beautiful handwriting",sentence:"Not very many people learn the art of calligraphy these days."},
+"catastrophic":{lv:5,pos:"adjective",def:"extremely severe in outcome",sentence:"Many people were left with nowhere to live after the catastrophic earthquake."},
+"coalition":{lv:5,pos:"noun",def:"a combination of two or more political parties with similar goals",sentence:"The coalition presented a united front in their approach to free trade."},
+"commemorate":{lv:5,pos:"verb",def:"to honour the memory of someone or something",sentence:"There were lengthy discussions on how to commemorate the Anzac Day centenary."},
+"consensus":{lv:5,pos:"noun",def:"general agreement",sentence:"After hours of discussion, the committee reached a consensus on which design would be adopted."},
+"contemptuous":{lv:5,pos:"adjective",def:"showing dislike or disgust",sentence:"His sister was always contemptuous of his untidy appearance and poor manners."},
+"delirium":{lv:5,pos:"noun",def:"a state of wild excitement or emotion",sentence:"The crowd was in a delirium of joy when their team came back from twenty points behind to win!"},
+"diagnosis":{lv:5,pos:"noun",def:"the identification of an illness or condition by examination of the symptoms",sentence:"They would have to wait for the test results before a diagnosis could be made."},
+"discrepancy":{lv:5,pos:"noun",def:"a difference",sentence:"There is a discrepancy between the two accounts and we don't know which to believe."},
+"elixir":{lv:5,pos:"noun",def:"a preparation formerly believed to prolong life",sentence:"Many fairy tales tell of a search for a magic elixir."},
+"entourage":{lv:5,pos:"noun",def:"a group of people attending and helping someone, especially an important person",sentence:"The prime minister's entourage travelled with her on the plane."},
+"eucalyptus":{lv:5,pos:"noun",def:"a type of tree with many different varieties, used for its timber and its strong oil",sentence:"The Australian bush is characterised by the eucalyptus."},
+"excruciating":{lv:5,pos:"adjective",def:"very painful or causing great suffering",sentence:"The pain from her burns was excruciating."},
+"exorbitant":{lv:5,pos:"adjective",def:"going beyond what is normal or reasonable, especially in price",sentence:"I avoid that shop because it charges exorbitant prices."},
+"impeccable":{lv:5,pos:"adjective",def:"without any faults",sentence:"The principal said she was proud of our impeccable behaviour on the excursion."},
+"inaugural":{lv:5,pos:"adjective",def:"having to do with a formal beginning",sentence:"The president's inaugural speech was a great success."},
+"inconceivable":{lv:5,pos:"adjective",def:"unimaginable or incredible",sentence:"Twenty years ago it would have been inconceivable that people would equip new houses with water tanks."},
+"iridescent":{lv:5,pos:"adjective",def:"displaying colours like those of the rainbow",sentence:"The trapeze artists looked dazzling in their iridescent costumes."},
+"jurisdiction":{lv:5,pos:"noun",def:"the authority to make a judgement",sentence:"The industrial court does not have jurisdiction to decide on that kind of dispute."},
+"liaison":{lv:5,pos:"noun",def:"a connection or communication between people or groups",sentence:"The council works in liaison with local bush regeneration groups."},
+"maintenance":{lv:5,pos:"noun",def:"the act of keeping something in good condition",sentence:"The maintenance of his motorbike took up much of his time."},
+"malevolent":{lv:5,pos:"adjective",def:"full of wickedness and hatred",sentence:"The film star was stunned by the vicious campaign of malevolent gossip about her."},
+"mediocre":{lv:5,pos:"adjective",def:"neither good nor bad",sentence:"My report said that I'd passed but my work was mediocre and I could do better."},
+"millennium":{lv:5,pos:"noun",def:"a period of one thousand years",sentence:"I wonder what the world will look like by the time we reach the next millennium?"},
+"negotiation":{lv:5,pos:"noun",def:"the discussion and arrangement of some kind of agreement",sentence:"The workers and their employer settled the dispute by negotiation."},
+"paradigm":{lv:5,pos:"noun",def:"a typical pattern or example",sentence:"Canberra is considered by many to be the paradigm of a planned city."},
+"pharmaceutical":{lv:5,pos:"adjective",def:"relating to the preparation of drugs used in medicine",sentence:"The pharmaceutical company is about to release a new asthma medication."},
+"planetarium":{lv:5,pos:"noun",def:"a domed building where images of stars, planets and constellations are projected onto the ceiling",sentence:"I enjoyed the trip to the planetarium so much that I set up my telescope when I got home."},
+"predecessor":{lv:5,pos:"noun",def:"someone who had the job before someone else",sentence:"Governor Macquarie's predecessor as governor of New South Wales was William Bligh."},
+"propitious":{lv:5,pos:"adjective",def:"likely to result in success or pleasure",sentence:"They hoped the weather would be propitious for the upcoming picnic."},
+"quarantine":{lv:5,pos:"noun",def:"the separating of people or animals from others for a certain period of time to prevent the spread of a disease",sentence:"Animals coming into Australia have to be kept in quarantine to prevent the spread of diseases."},
+"recession":{lv:5,pos:"noun",def:"a time when business affairs in a nation are bad",sentence:"Many people found it hard to get a job during the recession."},
+"resuscitation":{lv:5,pos:"noun",def:"the act of reviving somebody who is unconscious",sentence:"In the first aid course we learned how to perform resuscitation."},
+"revolution":{lv:5,pos:"noun",def:"a complete change",sentence:"There's been a revolution in the photography business."},
+"simultaneous":{lv:5,pos:"adjective",def:"happening at the same time",sentence:"It is hard to scratch your head and rub your tummy as simultaneous movements."},
+"spherical":{lv:5,pos:"adjective",def:"having the shape of a round ball",sentence:"Soccer is played with a spherical ball, unlike rugby."},
+"subliminal":{lv:5,pos:"adjective",def:"being at a level below the threshold of consciousness or perception",sentence:"Subliminal advertising tempts us without our awareness."},
+"syllabus":{lv:5,pos:"noun",def:"a plan of what is to be taught in a course of lessons",sentence:"After pressure from the students, they have added cooking to the syllabus at the local boys' school."},
+"symptomatic":{lv:5,pos:"adjective",def:"indicative",sentence:"The noise the car made was symptomatic of an engine problem."},
+"temperamental":{lv:5,pos:"adjective",def:"moody",sentence:"The outburst from the temperamental actor was caught on camera."},
+"trajectory":{lv:5,pos:"noun",def:"the curved path travelled by a projectile in flight",sentence:"The crowd watched the trajectory of the cricket ball until it went over the fence."},
+"tumultuous":{lv:5,pos:"adjective",def:"full of or marked by uproar or loud noise",sentence:"The band decided to perform an encore after receiving tumultuous applause from the audience."},
+"unfathomable":{lv:5,pos:"adjective",def:"not able to be understood",sentence:"The rules of quantum physics are unfathomable to me."},
+"vandalism":{lv:5,pos:"noun",def:"intentional destruction or damage of property",sentence:"Our art room was destroyed in an act of mindless vandalism."},
+"vivacious":{lv:5,pos:"adjective",def:"lively or energetic",sentence:"It's always a pleasure to be with such a happy, vivacious person."},
+"alliteration":{lv:5,pos:"noun",def:"the repeated use of the same letter or sound to start two or more words in a group",sentence:"An example of alliteration is: Around the rugged rocks the ragged rascal ran."},
+"architecture":{lv:5,pos:"noun",def:"the design of buildings",sentence:"Studying the architecture of the old buildings inspired her to explore the history of the area."},
+"bibliography":{lv:5,pos:"noun",def:"a list of all the books, websites, etc., read or used when writing a book or essay",sentence:"We lose marks if we don't include a complete bibliography with our work."},
+"personification":{lv:5,pos:"noun",def:"the treating of objects or ideas as if they were people",sentence:"The book was begging to be opened is an example of personification."},
+"picturesque":{lv:5,pos:"adjective",def:"pretty or charming",sentence:"We had a picnic in a picturesque spot beside the river, surrounded by wildflowers."},
+"synopsis":{lv:5,pos:"noun",def:"a short version or summary",sentence:"I will give you a synopsis of what we have done so far."},
+"crustacean":{lv:5,pos:"noun",def:"a type of animal with a hard shell instead of a skeleton, such as a crab, usually living in water",sentence:"I wonder if every crustacean is as delicious as the lobster and prawn?"},
+"irresistible":{lv:5,pos:"adjective",def:"so tempting that you cannot fight against it",sentence:"She found the sweets and cakes on the table irresistible."},
+"metabolism":{lv:5,pos:"noun",def:"all the processes and chemical changes happening in the body of a living thing",sentence:"A slow metabolism can make it difficult to lose weight."},
+"polyunsaturated":{lv:5,pos:"adjective",def:"having to do with certain fats or oils which are thought to be better for your health than other types",sentence:"Foods containing polyunsaturated fats are an important part of a healthy diet."},
+"salmonella":{lv:5,pos:"noun",def:"a type of bacterium which contaminates food, causing sickness in humans and animals",sentence:"Tests found the presence of salmonella in the eggs which had caused the food poisoning."},
+"deforestation":{lv:5,pos:"noun",def:"the permanent removal of forests or trees from a large area",sentence:"Extensive deforestation has a disastrous effect on the environment."},
+"primordial":{lv:5,pos:"adjective",def:"existing at the beginning of the world",sentence:"Scientists have tried to discover what kind of life existed in the earth's primordial oceans."},
+"alkaline":{lv:5,pos:"adjective",def:"having to do with a substance which neutralises acids",sentence:"Some plants won't grow in alkaline soil."},
+"centrifugal":{lv:5,pos:"adjective",def:"moving outwards from the centre",sentence:"Centrifugal force is what keeps water in a bucket when you swing it over your head."},
+"equilibrium":{lv:5,pos:"noun",def:"equal balance",sentence:"The two children weighed the same, so they managed to keep the seesaw in equilibrium."},
+"extrapolate":{lv:5,pos:"verb",def:"to make a guess about something you don't know using the things you do know as a basis",sentence:"You can extrapolate from this survey that about one in twenty people won't vote at all."},
+"nanotechnology":{lv:5,pos:"noun",def:"technology generated from the science concerned with objects of the smallest dimensions",sentence:"The recent advances made in nanotechnology have led to some amazing new products."},
+"statistician":{lv:5,pos:"noun",def:"a compiler of numerical figures or data",sentence:"A statistician analysed the population counts from the past twenty years."},
+"velocity":{lv:5,pos:"noun",def:"speed",sentence:"The wind velocity reached hurricane level."},
+"aerodynamic":{lv:5,pos:"adjective",def:"designed to reduce resistance to the air, and so to travel faster",sentence:"The aircraft's aerodynamic design enabled it to break the sound barrier."},
+"ambidextrous":{lv:5,pos:"adjective",def:"able to use both hands equally well",sentence:"The ambidextrous player could wield a hockey stick equally well with either hand."},
+"circumnavigate":{lv:5,pos:"verb",def:"to sail around something",sentence:"The contestants in the sailing race had to circumnavigate the island."},
+"masquerade":{lv:5,pos:"noun",def:"a party at which the guests wear fancy dress",sentence:"I plan on wearing a pirate costume to the masquerade."},
+"parachute":{lv:5,pos:"noun",def:"a large piece of cloth which opens out in a round shape, used to slow down the fall of someone jumping from an aircraft",sentence:"We watched as the skydiver's parachute opened, and she drifted towards the ground."},
+"rejuvenation":{lv:5,pos:"noun",def:"the process of restoring vitality or youthful appearance to someone or something",sentence:"I felt a sense of rejuvenation after my beach holiday."},
+"conquistador":{lv:6,pos:"noun",def:"one of the Spanish conquerors of Mexico and Peru in the sixteenth century",sentence:"The book described the life and adventures of a famous conquistador."},
+"convalescence":{lv:6,pos:"noun",def:"the gradual recovery of health and strength after illness",sentence:"We knew he would recover but he would definitely need a long convalescence."},
+"cryptocurrency":{lv:6,pos:"noun",def:"a digital currency using data encryption",sentence:"The only cryptocurrency I know about is bitcoin."},
+"defibrillator":{lv:6,pos:"noun",def:"a medical apparatus which uses an electric shock to restore normal heart rhythm",sentence:"The paramedics used a defibrillator to get the man's heart pumping properly."},
+"ecclesiastical":{lv:6,pos:"adjective",def:"having to do with the church",sentence:"A bishop needs to have an extensive knowledge of ecclesiastical matters."},
+"effervescent":{lv:6,pos:"adjective",def:"bubbling or fizzy",sentence:"The bubbles from the effervescent drink tickled my nose."},
+"entrepreneur":{lv:6,pos:"noun",def:"a person who organises a business enterprise, especially a risky one",sentence:"The entrepreneur started a business making automatic lawnmowers and soon became a millionaire."},
+"gastroenterologist":{lv:6,pos:"noun",def:"a doctor that deals specifically with the structure and disorders of the digestive organs",sentence:"The gastroenterologist gave him a list of foods that would make him feel a lot better."},
+"guillotine":{lv:6,pos:"noun",def:"a machine with a heavy blade that falls between two posts, used in the past for cutting off the head of someone sentenced to death",sentence:"During the French Revolution many aristocrats were publicly executed by guillotine."},
+"hypochondriac":{lv:6,pos:"noun",def:"someone who is so anxious about their health that they often think they have an illness when they don't",sentence:"He is a hypochondriac and imagines he has every disease he hears about on TV."},
+"hypothalamus":{lv:6,pos:"noun",def:"a part of the brain that controls things like our body temperature, hunger and sleep patterns",sentence:"The hypothalamus is a very small part of the brain but it plays an important role."},
+"lackadaisical":{lv:6,pos:"adjective",def:"careless and indifferent",sentence:"Her lackadaisical attitude to her studies contributed to her low marks."},
+"loquacious":{lv:6,pos:"adjective",def:"liking to talk a lot",sentence:"He was a loquacious guest and his stories kept us entertained for hours."},
+"lugubrious":{lv:6,pos:"adjective",def:"mournful or dismal",sentence:"He gave her a lugubrious look and said mournfully that nothing ever turned out well."},
+"musculoskeletal":{lv:6,pos:"adjective",def:"having to do with the muscles and bones in the body",sentence:"The different way humans and animals move is all related to their musculoskeletal systems."},
+"omniscient":{lv:6,pos:"adjective",def:"knowing everything",sentence:"Most religions believe that their god is omniscient."},
+"osteoporosis":{lv:6,pos:"noun",def:"a condition in which the bones become brittle because of a lack of calcium",sentence:"My grandmother takes calcium supplements to help strengthen her bones."},
+"paracetamol":{lv:6,pos:"noun",def:"a pain-relieving medicine",sentence:"Many people take paracetamol when they have a headache."},
+"paraphernalia":{lv:6,pos:"plural noun",def:"goods, equipment or other articles, especially unnecessary ones",sentence:"There is a lot of useless paraphernalia in the garage that could be thrown out."},
+"penicillin":{lv:6,pos:"noun",def:"a strong germ-fighting substance used in medicine",sentence:"In nineteen forty, Australian scientist Howard Florey discovered how penicillin could be used as a medicine."},
+"petroglyph":{lv:6,pos:"noun",def:"a drawing or carving on rock, especially one made by prehistoric people",sentence:"We saw a petroglyph that was thousands of years old on the wall of the cave."},
+"potpourri":{lv:6,pos:"noun",def:"a mixture of dried petals and spices, kept in a jar for fragrance",sentence:"My mother keeps potpourri in her wardrobe so her clothes always smell nice."},
+"rheumatism":{lv:6,pos:"noun",def:"a disease affecting the joints or muscles",sentence:"During winter she suffers from rheumatism in her fingers."},
+"sarcophagus":{lv:6,pos:"noun",def:"a stone coffin, especially a decorated one, often displayed as a monument",sentence:"I saw the sarcophagus of Ramses the Fourth when I visited the Valley of the Kings in Egypt."},
+"sequoia":{lv:6,pos:"noun",def:"a type of very large tree found in south-western North America",sentence:"The tallest tree in the world is a sequoia."},
+"subpoena":{lv:6,pos:"noun",def:"a legal document ordering a person to appear in court, usually as a witness",sentence:"She was served with a subpoena and had to give evidence in court."},
+"subterranean":{lv:6,pos:"adjective",def:"underground",sentence:"I love my ants' nest — it's amazing to see the subterranean passages they make."},
+"thylacine":{lv:6,pos:"noun",def:"a wolf-like marsupial of Tasmania, tan-coloured, with black stripes across the back, now thought to be extinct",sentence:"The thylacine is also known as the Tasmanian tiger."},
+"tuberculosis":{lv:6,pos:"noun",def:"a disease of the lungs in which small lumps or swellings are produced",sentence:"The doctor diagnosed her with tuberculosis and admitted her to hospital."},
+"velociraptor":{lv:6,pos:"noun",def:"a kind of dinosaur capable of running at great speed",sentence:"Some scientists believe that the velociraptor could run at up to sixty kilometres an hour."},
+"cacophony":{lv:6,pos:"noun",def:"a loud, unmusical sound",sentence:"There was a cacophony of car horns as the truck continued to block the road."},
+"pseudonym":{lv:6,pos:"noun",def:"an invented name used instead of your real name, often used by authors",sentence:"The novelist's real name is Mary Smith but she uses the pseudonym Kathy Celeste Bouvoir."},
+"soliloquy":{lv:6,pos:"noun",def:"talking to yourself when you are alone, as in a play",sentence:"The teacher read out the famous soliloquy from Shakespeare's Hamlet."},
+"cholesterol":{lv:6,pos:"noun",def:"a substance found in the body and some foods",sentence:"I didn't know that there was a good type of cholesterol as well as a bad one!"},
+"degustation":{lv:6,pos:"noun",def:"a sampling of a variety of different food dishes, as in a restaurant",sentence:"The restaurant had a degustation menu, so we could try a little bit of everything."},
+"fluoridation":{lv:6,pos:"noun",def:"the addition of fluoride to toothpaste, to the water supply and so on, to help prevent tooth decay",sentence:"Fluoridation of the water supply has led to a reduction in tooth decay."},
+"mozzarella":{lv:6,pos:"noun",def:"a soft, white cheese which melts easily",sentence:"Mozzarella is one of the ingredients essential for making pizza."},
+"ratatouille":{lv:6,pos:"noun",def:"a type of vegetable stew",sentence:"Ratatouille is sometimes served cold but I much prefer it hot!"},
+"archipelago":{lv:6,pos:"noun",def:"a group of islands in a sea",sentence:"Indonesia is an archipelago of more than thirteen thousand islands."},
+"cumulonimbus":{lv:6,pos:"noun",def:"a heavy, tall mass of cloud characteristic of thunderstorm conditions",sentence:"When we saw the sky fill with cumulonimbus, we knew we had to head for home."},
+"lithosphere":{lv:6,pos:"noun",def:"the crust or solid part of the earth",sentence:"We learned about the earth's lithosphere today when a geologist came to talk to our class."},
+"algorithm":{lv:6,pos:"noun",def:"a procedure for solving a particular mathematical problem in a finite number of steps",sentence:"The programmer worked out the algorithm for solving the problem."},
+"infinitesimal":{lv:6,pos:"adjective",def:"immeasurably small",sentence:"The rise in temperature was so infinitesimal that it did not register on the thermometer."},
+"metamorphosis":{lv:6,pos:"noun",def:"a change from one form to another",sentence:"For our assignment we had to write about the metamorphosis of a tadpole into a frog."},
+"oscillation":{lv:6,pos:"noun",def:"a repetitive to and fro motion of an object",sentence:"The computer readout recorded the degree of oscillation of the indicator as it moved backwards and forwards."},
+"photosynthesis":{lv:6,pos:"noun",def:"the making of carbohydrates by plants from carbon dioxide and water in the presence of light and chlorophyll",sentence:"The process of photosynthesis in plants is necessary for life."},
+"connoisseur":{lv:6,pos:"noun",def:"someone who has a special interest in or knowledge of a particular subject",sentence:"I like to visit the art gallery but I'm not a connoisseur of art by any means!"},
+"orienteering":{lv:6,pos:"noun",def:"a sport in which you have to find your way as quickly as possible over a difficult course, using maps and compasses",sentence:"Make sure you bring a compass and running shoes for the orienteering tomorrow."},
+"thoroughbred":{lv:6,pos:"adjective",def:"of pure or unmixed breed, as a horse or other animal",sentence:"She was an experienced breeder of thoroughbred racehorses."}
+};
+
+// ══ SETUP ══
+const LEVELS={2:[],3:[],4:[],5:[],6:[]};
+Object.entries(DB).forEach(([w,d])=>LEVELS[d.lv].push(w));
+const ALL=Object.keys(DB);
+const $=id=>document.getElementById(id);
+[2,3,4,5,6].forEach(lv=>$('lcount-'+lv).textContent=LEVELS[lv].length+' words');
+$('lcount-all').textContent=ALL.length+' words';
+
+let sel={level:null,count:null};
+let sess={words:[],idx:0};
+let tok=0, isPaused=false;
+const synth=window.speechSynthesis;
+
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));$('screen-'+id).classList.add('active');}
+function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// ══ HOME ══
+function selectLevel(lv){
+  sel.level=lv; sel.count=null;
+  document.querySelectorAll('.level-card').forEach(c=>c.classList.remove('selected'));
+  const idx=lv==='all'?5:[2,3,4,5,6].indexOf(lv);
+  document.querySelectorAll('.level-card')[idx].classList.add('selected');
+  const pool=lv==='all'?ALL:LEVELS[lv];
+  const max=pool.length;
+  const names={2:'Foundation',3:'Developing',4:'Intermediate',5:'Advanced',6:'Expert'};
+  $('count-label').textContent='How many words? ('+(lv==='all'?'All Levels':'Level '+lv+' — '+names[lv])+')';
+  $('max-note').textContent=max+' words in this pool';
+  $('cnt-all-n').textContent=max;
+  [10,25,40].forEach(n=>$('cnt-'+n).className='count-card'+(n>max?' disabled':''));
+  document.querySelectorAll('.count-card').forEach(c=>c.classList.remove('selected'));
+  $('count-section').classList.add('visible');
+  $('start-btn').classList.remove('visible');
+}
+
+function selectCount(n){
+  sel.count=n;
+  document.querySelectorAll('.count-card').forEach(c=>c.classList.remove('selected'));
+  $(n==='all'?'cnt-all':'cnt-'+n).classList.add('selected');
+  $('start-btn').classList.add('visible');
+}
+
+function clearLevel(){
+  sel={level:null,count:null};
+  document.querySelectorAll('.level-card,.count-card').forEach(c=>c.classList.remove('selected'));
+  $('count-section').classList.remove('visible');
+  $('start-btn').classList.remove('visible');
+}
+
+// ══ SESSION ══
+function startSession(){
+  if(!sel.level||!sel.count) return;
+  const pool=sel.level==='all'?ALL:LEVELS[sel.level];
+  const words=shuffle(pool);
+  const n=sel.count==='all'?words.length:Math.min(sel.count,words.length);
+  sess={words:words.slice(0,n),idx:0};
+  isPaused=false;
+  showScreen('reader');
+  loadWord();
+}
+
+function restartSession(){startSession();}
+function showHome(){synth.cancel();tok++;showScreen('home');}
+function confirmBack(){synth.cancel();tok++;isPaused=false;showScreen('home');}
+
+function loadWord(){
+  const w=sess.words[sess.idx];
+  const total=sess.words.length;
+  $('reader-info').textContent='Word '+(sess.idx+1)+' of '+total;
+  $('prog').style.width=((sess.idx/total)*100)+'%';
+  setPhase(-1);
+  $('full-word').className='full-word';
+  $('full-word').textContent=w;
+  $('pos-badge').className='pos-badge';
+  $('def-box').className='def-box';
+  $('def-box').textContent='';
+  buildBoxes(w);
+  isPaused=false; updatePauseBtn();
+  tok++;
+  const myTok=tok;
+  setTimeout(()=>playSeq(myTok,w),350);
+}
+
+function buildBoxes(w){
+  const row=$('letter-row');
+  row.innerHTML='';
+  row.className='letter-row'+(w.length>14?' xl':w.length>9?' lg':'');
+  for(let i=0;i<w.length;i++){
+    const b=document.createElement('div');
+    b.className='lb'; b.id='lb'+i;
+    b.textContent=w[i].toUpperCase();
+    row.appendChild(b);
+  }
+}
+
+function hilite(i,total){
+  for(let j=0;j<total;j++){
+    const b=$('lb'+j);
+    if(!b) continue;
+    b.className='lb'+(j<i?' done':j===i?' active':'');
+  }
+}
+
+function allDone(total){for(let j=0;j<total;j++){const b=$('lb'+j);if(b)b.className='lb done';}}
+
+// ══ SPEECH ══
+function speak(text,rate=0.85){
+  return new Promise(res=>{
+    synth.cancel();
+    const u=new SpeechSynthesisUtterance(text);
+    u.rate=rate;u.pitch=1;u.lang='en-AU';
+    u.onend=res;u.onerror=res;
+    synth.speak(u);
+  });
+}
+
+const PHASE_LABELS=['Hear word','Spelling…','Definition…','Hear again'];
+function setPhase(n){
+  for(let i=0;i<4;i++){
+    const d=$('ph'+i);
+    d.className='ph-dot'+(i<n?' done':i===n?' active':'');
+  }
+  $('phase-txt').textContent=n>=0?PHASE_LABELS[n]:'';
+  $('wave').className='wave'+(n>=0?' on':'');
+}
+
+async function playSeq(myTok,w){
+  const entry=DB[w];
+
+  // Phase 0 — hear word
+  setPhase(0);
+  await speak(w,0.82);
+  if(myTok!==tok) return;
+
+  // Reveal word
+  $('full-word').className='full-word show';
+  await wait(300);
+  if(myTok!==tok) return;
+
+  // Phase 1 — spell
+  setPhase(1);
+  await wait(150);
+  for(let i=0;i<w.length;i++){
+    if(myTok!==tok) return;
+    // If paused, just halt here — toggling pause will cancel this tok
+    while(isPaused){await wait(80);if(myTok!==tok)return;}
+    hilite(i,w.length);
+    await speak(w[i],0.7);
+    if(myTok!==tok) return;
+    await wait(200);
+    if(myTok!==tok) return;
+  }
+  allDone(w.length);
+  await wait(350);
+  if(myTok!==tok) return;
+
+  // Phase 2 — definition
+  setPhase(2);
+  $('pos-badge').textContent=entry.pos;
+  $('pos-badge').className='pos-badge show';
+  $('def-box').textContent=entry.def;
+  $('def-box').className='def-box show';
+  await wait(300);
+  if(myTok!==tok) return;
+  await speak(entry.def,0.88);
+  if(myTok!==tok) return;
+  await wait(400);
+  if(myTok!==tok) return;
+
+  // Phase 3 — hear word again
+  setPhase(3);
+  await speak(w,0.74);
+  if(myTok!==tok) return;
+
+  setPhase(-1);
+  await wait(2000);
+  if(myTok!==tok) return;
+  advance();
+}
+
+function advance(){
+  sess.idx++;
+  sess.idx>=sess.words.length?showDone():loadWord();
+}
+
+function showDone(){
+  synth.cancel();tok++;
+  $('done-num').textContent=sess.words.length;
+  showScreen('done');
+}
+
+// ══ CONTROLS ══
+function togglePause(){
+  isPaused=!isPaused;
+  if(isPaused){tok++;synth.cancel();$('wave').className='wave';}
+  else{replayWord();}
+  updatePauseBtn();
+}
+
+function updatePauseBtn(){
+  const btn=$('pause-btn');
+  if(isPaused){
+    btn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5,3 19,12 5,21"/></svg> Resume`;
+    btn.className='pause-btn paused';
+  } else {
+    btn.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg> Pause`;
+    btn.className='pause-btn';
+  }
+}
+
+function replayWord(){
+  isPaused=false; updatePauseBtn();
+  synth.cancel(); tok++;
+  const myTok=tok; const w=sess.words[sess.idx];
+  setPhase(-1);
+  $('full-word').className='full-word';
+  $('pos-badge').className='pos-badge';
+  $('def-box').className='def-box';
+  buildBoxes(w);
+  setTimeout(()=>playSeq(myTok,w),300);
+}
+
+function skipWord(){synth.cancel();tok++;advance();}
+
+function prevWord(){
+  if(sess.idx<=0) return;
+  synth.cancel();tok++;
+  sess.idx--;loadWord();
+}
+</script>
+</body>
+</html>
